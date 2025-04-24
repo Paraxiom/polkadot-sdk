@@ -90,3 +90,6 @@ harness = false
 [[bench]]
 name = "request_response_protocol"
 harness = false
+
+# QKD dependencies
+parking_lot = "0.12.0"
