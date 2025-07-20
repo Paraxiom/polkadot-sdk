@@ -22492,6 +22492,7 @@ dependencies = [
  "parity-scale-codec",
  "parking_lot 0.12.3",
  "paste",
+ "pqcrypto-sphincsplus",
  "primitive-types 0.13.1",
  "rand 0.8.5",
  "regex",

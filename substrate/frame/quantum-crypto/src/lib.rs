@@ -12,7 +12,7 @@ pub mod pallet {
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
     use sp_std::vec::Vec;
-    use sp_core::ConstU32;
+    use sp_core::{ConstU32, quantum_randomness::{QuantumRandomness, QuantumEntropyPool, QuantumEntropyMetrics}};
     use codec::MaxEncodedLen;
     
     #[pallet::pallet]
@@ -228,6 +228,68 @@ pub mod pallet {
             
             // QBER should be below 5%
             metrics.qber < 500 && metrics.visibility > 80 && metrics.key_rate > 0
+        }
+    }
+    
+    // Implement QuantumRandomness trait
+    impl<T: Config> QuantumRandomness for Pallet<T> {
+        fn quantum_random(num_bytes: usize) -> Option<Vec<u8>> {
+            Self::get_quantum_entropy(num_bytes)
+        }
+        
+        fn fill_quantum_random(buffer: &mut [u8]) -> Result<(), sp_core::quantum_randomness::QuantumRandomnessError> {
+            if let Some(entropy) = Self::get_quantum_entropy(buffer.len()) {
+                buffer.copy_from_slice(&entropy);
+                Ok(())
+            } else {
+                Err(sp_core::quantum_randomness::QuantumRandomnessError::InsufficientEntropy)
+            }
+        }
+        
+        fn entropy_level() -> u8 {
+            let pool = EntropyPool::<T>::get();
+            let max_size = T::MaxEntropyPoolSize::get() as usize;
+            ((pool.len() as f32 / max_size as f32) * 100.0) as u8
+        }
+        
+        fn is_healthy() -> bool {
+            Self::is_qkd_healthy()
+        }
+    }
+    
+    // Implement QuantumEntropyPool trait
+    impl<T: Config> QuantumEntropyPool for Pallet<T> {
+        fn add_entropy(entropy: &[u8]) -> Result<(), sp_core::quantum_randomness::QuantumRandomnessError> {
+            let bounded_entropy: BoundedVec<u8, T::MaxEntropyPoolSize> = entropy.to_vec()
+                .try_into()
+                .map_err(|_| sp_core::quantum_randomness::QuantumRandomnessError::InsufficientEntropy)?;
+            
+            let mut pool = EntropyPool::<T>::get();
+            pool.try_extend(bounded_entropy.into_iter())
+                .map_err(|_| sp_core::quantum_randomness::QuantumRandomnessError::InsufficientEntropy)?;
+            
+            EntropyPool::<T>::put(&pool);
+            Ok(())
+        }
+        
+        fn consume_entropy(num_bytes: usize) -> Option<Vec<u8>> {
+            Self::get_quantum_entropy(num_bytes)
+        }
+        
+        fn metrics() -> QuantumEntropyMetrics {
+            let pool = EntropyPool::<T>::get();
+            let qkd_metrics = QkdMetrics::<T>::get();
+            
+            QuantumEntropyMetrics {
+                total_bytes: 0, // Would need to track this
+                pool_size: pool.len() as u32,
+                generation_rate: qkd_metrics.key_rate,
+                last_update: qkd_metrics.last_update,
+            }
+        }
+        
+        fn clear_pool() {
+            EntropyPool::<T>::kill();
         }
     }
 }

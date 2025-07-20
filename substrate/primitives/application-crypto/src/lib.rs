@@ -54,6 +54,7 @@ pub mod ecdsa;
 pub mod ecdsa_bls381;
 pub mod ed25519;
 pub mod sr25519;
+pub mod sphincs;
 mod traits;
 
 pub use traits::*;

@@ -98,7 +98,7 @@ use sp_keystore::KeystoreExt;
 use sp_core::bandersnatch;
 use sp_core::{
 	crypto::KeyTypeId,
-	ecdsa, ed25519,
+	ecdsa, ed25519, sphincs,
 	offchain::{
 		HttpError, HttpRequestId, HttpRequestStatus, OpaqueNetworkState, StorageKind, Timestamp,
 	},
@@ -1435,6 +1435,62 @@ pub trait Crypto {
 			.bandersnatch_sign(id, pub_key, msg)
 			.ok()
 			.flatten()
+	}
+
+	/// Returns all `sphincs` public keys for the given key id from the keystore.
+	fn sphincs_public_keys(
+		&mut self,
+		id: PassPointerAndReadCopy<KeyTypeId, 4>,
+	) -> AllocateAndReturnByCodec<Vec<sphincs::Public>> {
+		self.extension::<KeystoreExt>()
+			.expect("No `keystore` associated for the current context!")
+			.sphincs_public_keys(id)
+	}
+
+	/// Generate a `sphincs` key for the given key type using an optional `seed` and
+	/// store it in the keystore.
+	///
+	/// The `seed` needs to be a valid utf8.
+	///
+	/// Returns the public key.
+	fn sphincs_generate(
+		&mut self,
+		id: PassPointerAndReadCopy<KeyTypeId, 4>,
+		seed: PassFatPointerAndDecode<Option<Vec<u8>>>,
+	) -> AllocateAndReturnPointer<sphincs::Public, 64> {
+		let seed = seed.as_ref().map(|s| core::str::from_utf8(s).expect("Seed is valid utf8!"));
+		self.extension::<KeystoreExt>()
+			.expect("No `keystore` associated for the current context!")
+			.sphincs_generate_new(id, seed)
+			.expect("`sphincs_generate` failed")
+	}
+
+	/// Sign the given `msg` with the `sphincs` key that corresponds to the given public key and
+	/// key type in the keystore.
+	///
+	/// Returns the signature.
+	fn sphincs_sign(
+		&mut self,
+		id: PassPointerAndReadCopy<KeyTypeId, 4>,
+		pub_key: PassPointerAndRead<&sphincs::Public, 64>,
+		msg: PassFatPointerAndRead<&[u8]>,
+	) -> AllocateAndReturnByCodec<Option<sphincs::Signature>> {
+		self.extension::<KeystoreExt>()
+			.expect("No `keystore` associated for the current context!")
+			.sphincs_sign(id, pub_key, msg)
+			.ok()
+			.flatten()
+	}
+
+	/// Verify a `sphincs` signature.
+	///
+	/// Returns `true` when the verification is successful.
+	fn sphincs_verify(
+		sig: PassFatPointerAndRead<&sphincs::Signature>,
+		msg: PassFatPointerAndRead<&[u8]>,
+		pubkey: PassPointerAndRead<&sphincs::Public, 64>,
+	) -> bool {
+		sphincs::Pair::verify(sig, msg, pubkey)
 	}
 }
 

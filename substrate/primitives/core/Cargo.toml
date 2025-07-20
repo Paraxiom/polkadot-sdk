@@ -48,6 +48,7 @@ sp-storage = { workspace = true }
 ss58-registry = { workspace = true }
 substrate-bip39 = { workspace = true }
 thiserror = { optional = true, workspace = true }
+pqcrypto-sphincsplus = { version = "0.7.1", default-features = false }
 tracing = { optional = true, workspace = true, default-features = true }
 zeroize = { workspace = true }
 

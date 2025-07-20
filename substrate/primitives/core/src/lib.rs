@@ -79,6 +79,8 @@ pub mod ecdsa;
 pub mod ed25519;
 pub mod paired_crypto;
 pub mod sr25519;
+pub mod sphincs;
+pub mod quantum_randomness;
 
 #[cfg(feature = "bls-experimental")]
 pub use bls::{bls377, bls381};

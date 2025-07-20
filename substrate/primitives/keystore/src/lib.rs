@@ -30,7 +30,7 @@ use sp_core::bandersnatch;
 use sp_core::{bls381, ecdsa_bls381};
 use sp_core::{
 	crypto::{ByteArray, CryptoTypeId, KeyTypeId},
-	ecdsa, ed25519, sr25519,
+	ecdsa, ed25519, sr25519, sphincs,
 };
 
 use alloc::{string::String, sync::Arc, vec::Vec};
@@ -371,6 +371,33 @@ pub trait Keystore: Send + Sync {
 		msg: &[u8],
 	) -> Result<Option<ecdsa_bls381::Signature>, Error>;
 
+	/// Returns all **sphincs** public keys for the given key type.
+	fn sphincs_public_keys(&self, key_type: KeyTypeId) -> Vec<sphincs::Public>;
+
+	/// Generate a new **sphincs** key pair for the given key type and an optional seed.
+	///
+	/// If the given seed is `Some(_)`, the key pair will be ephemeral and stored in memory.
+	fn sphincs_generate_new(
+		&self,
+		key_type: KeyTypeId,
+		seed: Option<&str>,
+	) -> Result<sphincs::Public, Error>;
+
+	/// Generate a **sphincs** signature for a given message.
+	///
+	/// Receives [`KeyTypeId`] and a [`sphincs::Public`] key to be able to map
+	/// them to a private key that exists in the keystore.
+	///
+	/// Returns a [`sphincs::Signature`] or `None` in case the given `key_type`
+	/// and `public` combination doesn't exist in the keystore.
+	/// An `Err` will be returned if generating the signature itself failed.
+	fn sphincs_sign(
+		&self,
+		key_type: KeyTypeId,
+		public: &sphincs::Public,
+		msg: &[u8],
+	) -> Result<Option<sphincs::Signature>, Error>;
+
 	/// Insert a new secret key.
 	fn insert(&self, key_type: KeyTypeId, suri: &str, public: &[u8]) -> Result<(), ()>;
 
@@ -396,6 +423,7 @@ pub trait Keystore: Send + Sync {
 	/// - bandersnatch
 	/// - bls381
 	/// - (ecdsa,bls381) paired keys
+	/// - sphincs
 	///
 	/// To support more schemes you can overwrite this method.
 	///
@@ -444,6 +472,11 @@ pub trait Keystore: Send + Sync {
 				let public = ecdsa_bls381::Public::from_slice(public)
 					.map_err(|_| Error::ValidationError("Invalid public key format".into()))?;
 				self.ecdsa_bls381_sign(id, &public, msg)?.map(|s| s.encode())
+			},
+			sphincs::CRYPTO_ID => {
+				let public = sphincs::Public::from_slice(public)
+					.map_err(|_| Error::ValidationError("Invalid public key format".into()))?;
+				self.sphincs_sign(id, &public, msg)?.map(|s| s.encode())
 			},
 			_ => return Err(Error::KeyNotSupported(id)),
 		};
