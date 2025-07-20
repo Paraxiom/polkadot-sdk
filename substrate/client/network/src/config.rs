@@ -655,6 +655,9 @@ pub struct NetworkConfiguration {
 
 	/// Networking backend used for P2P communication.
 	pub network_backend: NetworkBackendType,
+	
+	/// Quantum Key Distribution configuration
+	pub qkd_config: Option<crate::qkd_integration::QkdConfig>,
 }
 
 impl NetworkConfiguration {
@@ -688,6 +691,7 @@ impl NetworkConfiguration {
 				.expect("value is a constant; constant is non-zero; qed."),
 			ipfs_server: false,
 			network_backend: NetworkBackendType::Litep2p,
+			qkd_config: None,
 		}
 	}
 

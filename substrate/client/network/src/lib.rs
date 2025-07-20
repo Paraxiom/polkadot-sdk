@@ -246,6 +246,8 @@ mod behaviour;
 mod bitswap;
 mod litep2p;
 mod protocol;
+mod quantum_transport;
+mod qkd_integration;
 
 #[cfg(test)]
 mod mock;
@@ -290,6 +292,10 @@ pub use service::{
 	PublicKey,
 };
 pub use types::ProtocolName;
+
+// Quantum transport exports
+pub use quantum_transport::{QuantumTransport, QkdClient};
+pub use qkd_integration::{QkdConfig, create_qkd_client};
 
 /// Log target for `sc-network`.
 const LOG_TARGET: &str = "sub-libp2p";
