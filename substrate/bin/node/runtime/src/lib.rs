@@ -2520,6 +2520,17 @@ impl pallet_meta_tx::Config for Runtime {
 	type Extension = pallet_meta_tx::WeightlessExtension<Runtime>;
 }
 
+parameter_types! {
+	pub const MaxEntropyPoolSize: u32 = 1024 * 1024; // 1MB
+	pub const QkdEndpoint: &'static [u8] = b"http://localhost:8001/api/entropy/mixed";
+}
+
+impl pallet_quantum_crypto::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type MaxEntropyPoolSize = MaxEntropyPoolSize;
+	type QkdEndpoint = QkdEndpoint;
+}
+
 #[frame_support::runtime]
 mod runtime {
 	use super::*;
@@ -2797,6 +2808,9 @@ mod runtime {
 
 	#[runtime::pallet_index(89)]
 	pub type MetaTx = pallet_meta_tx::Pallet<Runtime>;
+
+	#[runtime::pallet_index(90)]
+	pub type QuantumCrypto = pallet_quantum_crypto::Pallet<Runtime>;
 }
 
 /// The address format for describing accounts.
