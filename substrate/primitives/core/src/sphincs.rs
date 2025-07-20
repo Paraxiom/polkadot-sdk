@@ -132,6 +132,12 @@ impl From<Public> for [u8; PUBLIC_KEY_SERIALIZED_SIZE] {
 	}
 }
 
+impl From<[u8; PUBLIC_KEY_SERIALIZED_SIZE]> for Public {
+	fn from(x: [u8; PUBLIC_KEY_SERIALIZED_SIZE]) -> Self {
+		Public(x)
+	}
+}
+
 impl AsRef<[u8]> for Public {
 	fn as_ref(&self) -> &[u8] {
 		&self.0

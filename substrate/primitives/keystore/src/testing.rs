@@ -27,7 +27,7 @@ use sp_core::{
 };
 use sp_core::{
 	crypto::{ByteArray, KeyTypeId, Pair, VrfSecret},
-	ecdsa, ed25519, sr25519,
+	ecdsa, ed25519, sr25519, sphincs,
 };
 
 use parking_lot::RwLock;
@@ -401,6 +401,27 @@ impl Keystore for MemoryKeystore {
 		public_keys
 			.iter()
 			.all(|(k, t)| self.keys.read().get(t).and_then(|s| s.get(k)).is_some())
+	}
+
+	fn sphincs_public_keys(&self, key_type: KeyTypeId) -> Vec<sphincs::Public> {
+		self.public_keys::<sphincs::Pair>(key_type)
+	}
+
+	fn sphincs_generate_new(
+		&self,
+		key_type: KeyTypeId,
+		seed: Option<&str>,
+	) -> Result<sphincs::Public, Error> {
+		self.generate_new::<sphincs::Pair>(key_type, seed)
+	}
+
+	fn sphincs_sign(
+		&self,
+		key_type: KeyTypeId,
+		public: &sphincs::Public,
+		msg: &[u8],
+	) -> Result<Option<sphincs::Signature>, Error> {
+		self.sign::<sphincs::Pair>(key_type, public, msg)
 	}
 }
 

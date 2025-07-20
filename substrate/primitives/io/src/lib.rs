@@ -1486,11 +1486,15 @@ pub trait Crypto {
 	///
 	/// Returns `true` when the verification is successful.
 	fn sphincs_verify(
-		sig: PassFatPointerAndRead<&sphincs::Signature>,
+		sig: PassFatPointerAndDecode<Vec<u8>>,
 		msg: PassFatPointerAndRead<&[u8]>,
 		pubkey: PassPointerAndRead<&sphincs::Public, 64>,
 	) -> bool {
-		sphincs::Pair::verify(sig, msg, pubkey)
+		if let Ok(signature) = sphincs::Signature::try_from(sig.as_slice()) {
+			sphincs::Pair::verify(&signature, msg, pubkey)
+		} else {
+			false
+		}
 	}
 }
 

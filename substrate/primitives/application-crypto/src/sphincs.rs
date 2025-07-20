@@ -18,13 +18,12 @@
 //! SPHINCS+ (post-quantum) cryptographic types and functionality.
 
 use crate::{KeyTypeId, RuntimePublic};
+use alloc::vec::Vec;
 
 pub use sp_core::sphincs::*;
 
 mod app {
-	use sp_core::testing::SPHINCS;
-
-	crate::app_crypto!(super, SPHINCS);
+	crate::app_crypto!(super, sp_core::testing::SPHINCS);
 }
 
 /// A SPHINCS+ keypair.
@@ -58,6 +57,17 @@ impl RuntimePublic for Public {
 
 	fn to_raw_vec(&self) -> Vec<u8> {
 		self.to_vec()
+	}
+
+	fn generate_proof_of_possession(&mut self, _key_type: KeyTypeId) -> Option<Self::Signature> {
+		// SPHINCS+ doesn't have a specific PoP mechanism
+		// We could sign a special message as proof
+		None
+	}
+
+	fn verify_proof_of_possession(&self, _pop: &Self::Signature) -> bool {
+		// SPHINCS+ doesn't have a specific PoP mechanism
+		false
 	}
 }
 

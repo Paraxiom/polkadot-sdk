@@ -708,6 +708,27 @@ impl<T: Keystore + ?Sized> Keystore for Arc<T> {
 	fn has_keys(&self, public_keys: &[(Vec<u8>, KeyTypeId)]) -> bool {
 		(**self).has_keys(public_keys)
 	}
+
+	fn sphincs_public_keys(&self, key_type: KeyTypeId) -> Vec<sphincs::Public> {
+		(**self).sphincs_public_keys(key_type)
+	}
+
+	fn sphincs_generate_new(
+		&self,
+		key_type: KeyTypeId,
+		seed: Option<&str>,
+	) -> Result<sphincs::Public, Error> {
+		(**self).sphincs_generate_new(key_type, seed)
+	}
+
+	fn sphincs_sign(
+		&self,
+		key_type: KeyTypeId,
+		public: &sphincs::Public,
+		msg: &[u8],
+	) -> Result<Option<sphincs::Signature>, Error> {
+		(**self).sphincs_sign(key_type, public, msg)
+	}
 }
 
 /// A shared pointer to a keystore implementation.
