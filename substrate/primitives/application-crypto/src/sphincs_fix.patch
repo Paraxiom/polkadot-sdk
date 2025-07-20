@@ -1,0 +1,29 @@
+--- a/substrate/primitives/application-crypto/src/sphincs.rs
++++ b/substrate/primitives/application-crypto/src/sphincs.rs
+@@ -22,9 +22,23 @@ use alloc::vec::Vec;
+ 
+ pub use sp_core::sphincs::*;
+ 
+-mod app {
+-	crate::app_crypto!(super, sp_core::testing::SPHINCS);
+-}
++// Fix recursive type issue by defining types directly
++pub mod app {
++	use super::*;
++	use crate::KeyTypeId;
++	
++	/// SPHINCS+ public key for application crypto
++	#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Encode, Decode, TypeInfo, MaxEncodedLen)]
++	pub struct Public(pub sp_core::sphincs::Public);
++	
++	/// SPHINCS+ signature for application crypto  
++	#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Encode, Decode, TypeInfo, MaxEncodedLen)]
++	pub struct Signature(pub sp_core::sphincs::Signature);
++	
++	/// SPHINCS+ key pair for application crypto
++	#[cfg(feature = "full_crypto")]
++	pub struct Pair(pub sp_core::sphincs::Pair);
++}
+ 
+ /// A SPHINCS+ keypair.
+ #[cfg(feature = "full_crypto")]
