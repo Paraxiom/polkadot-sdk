@@ -21,7 +21,7 @@
 use crate::quantum_transport::{QkdClient, QuantumKey, QuantumKeySource};
 use futures::future::BoxFuture;
 use libp2p::PeerId;
-use log::{debug, error, warn};
+use log::{debug, warn};
 use serde::{Deserialize, Serialize};
 use std::{
 	collections::HashMap,
@@ -98,7 +98,8 @@ impl KirqHubClient {
 			.map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 			
 		// Decode base64 entropy
-		base64::decode(&entropy_resp.entropy)
+		use base64::{Engine as _, engine::general_purpose};
+		general_purpose::STANDARD.decode(&entropy_resp.entropy)
 			.map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
 	}
 }
@@ -107,16 +108,15 @@ impl QkdClient for KirqHubClient {
 	fn get_key_for_peer(&self, peer_id: &PeerId) -> BoxFuture<'static, Result<QuantumKey, io::Error>> {
 		let peer_id = *peer_id;
 		let endpoint = self.endpoint.clone();
-		let client = self.client.clone();
 		let peer_endpoints = self.peer_endpoints.clone();
 		
 		Box::pin(async move {
 			// Check if we have a direct QKD link with this peer
 			let qkd_endpoint = peer_endpoints.lock().unwrap().get(&peer_id).cloned();
 			
-			if let Some(qkd_ep) = qkd_endpoint {
+			if let Some(_qkd_ep) = qkd_endpoint {
 				debug!("Using direct QKD link with peer: {}", peer_id);
-				// In real implementation, would negotiate with Toshiba QKD system
+				// TODO: In real implementation, would negotiate with Toshiba QKD system
 				// For now, simulate with KIRQ entropy
 			}
 			
@@ -125,13 +125,12 @@ impl QkdClient for KirqHubClient {
 			let key_material = kirq_client.get_entropy(32).await?;
 			
 			Ok(QuantumKey {
-				key_id: peer_id.to_bytes().to_vec(),
-				key_material,
+				id: format!("kirq_{}", hex::encode(&peer_id.to_bytes()[..8])),
+				key: key_material,
 				timestamp: std::time::SystemTime::now()
 					.duration_since(std::time::UNIX_EPOCH)
 					.unwrap()
 					.as_secs(),
-				source: QuantumKeySource::QRNG,
 			})
 		})
 	}
@@ -142,6 +141,7 @@ impl QkdClient for KirqHubClient {
 }
 
 /// Toshiba QKD client for direct quantum key distribution
+#[derive(Clone)]
 pub struct ToshibaQkdClient {
 	api_endpoint: String,
 	api_key: String,
@@ -194,14 +194,14 @@ impl ToshibaQkdClient {
 			warn!("High QBER detected: {}", key_resp.error_rate);
 		}
 		
-		let key_material = base64::decode(&key_resp.key_material)
+		use base64::{Engine as _, engine::general_purpose};
+		let key_material = general_purpose::STANDARD.decode(&key_resp.key_material)
 			.map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 			
 		Ok(QuantumKey {
-			key_id: key_resp.key_id.into_bytes(),
-			key_material,
+			id: key_resp.key_id,
+			key: key_material,
 			timestamp: key_resp.timestamp,
-			source: QuantumKeySource::QKD(self.api_endpoint.clone()),
 		})
 	}
 }
@@ -235,7 +235,8 @@ impl QkdClient for HybridQkdClient {
 		
 		Box::pin(async move {
 			// First try direct Toshiba QKD if available
-			if let Some(toshiba) = toshiba_clients.lock().unwrap().get(&peer_id) {
+			let toshiba_client = toshiba_clients.lock().unwrap().get(&peer_id).cloned();
+			if let Some(toshiba) = toshiba_client {
 				match toshiba.get_quantum_key(&peer_id.to_string()).await {
 					Ok(key) => {
 						debug!("Got quantum key from Toshiba QKD for peer: {}", peer_id);

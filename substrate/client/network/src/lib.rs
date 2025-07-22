@@ -247,6 +247,7 @@ mod bitswap;
 mod litep2p;
 mod protocol;
 mod quantum_transport;
+mod real_qkd_client;
 mod qkd_integration;
 
 #[cfg(test)]

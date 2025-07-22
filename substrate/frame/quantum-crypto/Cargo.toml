@@ -20,7 +20,7 @@ sp-runtime = { path = "../../primitives/runtime", default-features = false }
 sp-std = { path = "../../primitives/std", default-features = false }
 
 # Quantum crypto dependencies
-pqcrypto-sphincsplus = { version = "0.7.1", default-features = false }
+# pqcrypto-sphincsplus = { version = "0.7.1", default-features = false } # Removed - QuantumHarmony uses Falcon-512
 sha3 = { version = "0.10", default-features = false }
 rand_core = { version = "0.6", default-features = false }
 
@@ -39,7 +39,6 @@ std = [
     "sp-io/std",
     "sp-runtime/std",
     "sp-std/std",
-    "pqcrypto-sphincsplus/std",
     "sha3/std",
     "rand_core/std",
 ]

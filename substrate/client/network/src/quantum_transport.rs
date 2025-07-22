@@ -18,16 +18,16 @@
 
 //! Quantum-enhanced transport layer with QKD integration.
 
-use futures::{future::BoxFuture, prelude::*};
+use futures::future::BoxFuture;
 use libp2p::{
 	core::{
 		multiaddr::{Multiaddr, Protocol},
-		transport::{ListenerId, TransportError, TransportEvent},
+		transport::{DialOpts, ListenerId, TransportError, TransportEvent},
 		Transport,
 	},
 	PeerId,
 };
-use log::{debug, trace, warn};
+// use log::debug; // Will be used when quantum key exchange is implemented
 use std::{
 	collections::{HashMap, VecDeque},
 	io,
@@ -36,13 +36,15 @@ use std::{
 	task::{Context, Poll},
 };
 
+// Import real QKD client
+use crate::real_qkd_client::RealQkdClient;
+
 /// Quantum key material from QKD system
 #[derive(Clone)]
 pub struct QuantumKey {
-	pub key_id: Vec<u8>,
-	pub key_material: Vec<u8>,
+	pub id: String,
+	pub key: Vec<u8>,
 	pub timestamp: u64,
-	pub source: QuantumKeySource,
 }
 
 #[derive(Clone, Debug)]
@@ -91,6 +93,13 @@ impl QkdClient for MockQkdClient {
 				.get_mut(&peer_id)
 				.and_then(|queue| queue.pop_front())
 				.ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "No quantum key available"))
+				.map(|mut key| {
+					// Update old key format to new format if needed
+					if key.id.is_empty() {
+						key.id = uuid::Uuid::new_v4().to_string();
+					}
+					key
+				})
 		})
 	}
 	
@@ -124,6 +133,21 @@ impl<T> QuantumTransport<T> {
 	}
 }
 
+/// Create QKD client based on configuration
+pub fn create_qkd_client(use_real_qkd: bool, is_alice: bool) -> Arc<dyn QkdClient> {
+	if use_real_qkd {
+		match RealQkdClient::new(is_alice) {
+			Ok(client) => Arc::new(client),
+			Err(e) => {
+				log::warn!("Failed to create real QKD client: {}, falling back to mock", e);
+				Arc::new(MockQkdClient::new())
+			}
+		}
+	} else {
+		Arc::new(MockQkdClient::new())
+	}
+}
+
 impl<T> Transport for QuantumTransport<T>
 where
 	T: Transport + Send + Unpin + 'static,
@@ -149,10 +173,10 @@ where
 		self.inner.remove_listener(id)
 	}
 
-	fn dial(&mut self, addr: Multiaddr) -> Result<Self::Dial, TransportError<Self::Error>> {
-		let dial = self.inner.dial(addr)?;
-		let qkd_client = self.qkd_client.clone();
-		let quantum_keys = self.quantum_keys.clone();
+	fn dial(&mut self, addr: Multiaddr, opts: DialOpts) -> Result<Self::Dial, TransportError<Self::Error>> {
+		let dial = self.inner.dial(addr, opts)?;
+		let _qkd_client = self.qkd_client.clone();
+		let _quantum_keys = self.quantum_keys.clone();
 		
 		Ok(Box::pin(async move {
 			let output = dial.await?;
@@ -165,28 +189,17 @@ where
 		}))
 	}
 
-	fn dial_as_listener(
-		&mut self,
-		addr: Multiaddr,
-	) -> Result<Self::Dial, TransportError<Self::Error>> {
-		let dial = self.inner.dial_as_listener(addr)?;
-		let qkd_client = self.qkd_client.clone();
-		
-		Ok(Box::pin(async move {
-			let output = dial.await?;
-			let quantum_key = None; // Placeholder
-			Ok((output, quantum_key))
-		}))
-	}
+	// dial_as_listener is no longer part of the Transport trait in newer libp2p versions
 
 	fn poll(
-		mut self: Pin<&mut Self>,
+		self: Pin<&mut Self>,
 		cx: &mut Context<'_>,
 	) -> Poll<TransportEvent<Self::ListenerUpgrade, Self::Error>> {
-		match self.inner.poll_unpin(cx) {
+		let this = self.get_mut();
+		match Pin::new(&mut this.inner).poll(cx) {
 			Poll::Ready(event) => {
 				let event = event.map_upgrade(|upgrade| {
-					let qkd_client = self.qkd_client.clone();
+					let _qkd_client = this.qkd_client.clone();
 					Box::pin(async move {
 						let output = upgrade.await?;
 						let quantum_key = None; // Placeholder
@@ -199,9 +212,7 @@ where
 		}
 	}
 
-	fn address_translation(&self, listen: &Multiaddr, observed: &Multiaddr) -> Option<Multiaddr> {
-		self.inner.address_translation(listen, observed)
-	}
+	// address_translation is no longer part of the Transport trait in newer libp2p versions
 }
 
 /// Check if address supports QKD
@@ -235,13 +246,12 @@ pub mod bb84 {
 				.collect();
 			
 			QuantumKey {
-				key_id: vec![0; 16],
-				key_material,
+				id: uuid::Uuid::new_v4().to_string(),
+				key: key_material,
 				timestamp: std::time::SystemTime::now()
 					.duration_since(std::time::UNIX_EPOCH)
 					.unwrap()
 					.as_secs(),
-				source: QuantumKeySource::QKD("simulated".to_string()),
 			}
 		}
 	}
@@ -263,6 +273,6 @@ mod tests {
 	fn test_bb84_key_generation() {
 		let bb84 = bb84::BB84Protocol::new(32);
 		let key = bb84.generate_key();
-		assert_eq!(key.key_material.len(), 32);
+		assert_eq!(key.key.len(), 32);
 	}
 }

@@ -9,6 +9,7 @@ use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 use sp_core::H256;
+use serde::{Serialize, Deserialize};
 
 /// A proof of quantum coherence submitted by a validator
 #[derive(Clone, Encode, Decode, TypeInfo, RuntimeDebug, PartialEq)]
@@ -28,7 +29,7 @@ pub struct CoherenceProof<BlockNumber> {
 }
 
 /// Harmonic state of the network
-#[derive(Clone, Encode, Decode, TypeInfo, RuntimeDebug, PartialEq, Default, MaxEncodedLen)]
+#[derive(Clone, Encode, Decode, TypeInfo, RuntimeDebug, PartialEq, Default, MaxEncodedLen, Serialize, Deserialize)]
 pub struct HarmonicState {
 	/// Fundamental frequency of network oscillation
 	pub fundamental_frequency: u32,
@@ -55,7 +56,7 @@ pub struct TonnetzPosition {
 
 /// Phase synchronization data
 #[derive(Clone, Encode, Decode, TypeInfo, RuntimeDebug, PartialEq, MaxEncodedLen)]
-pub struct PhaseData {
+pub struct PhaseData<BlockNumber> {
 	/// Current phase in degrees
 	pub phase: u32,
 	/// Operating frequency
@@ -67,7 +68,7 @@ pub struct PhaseData {
 }
 
 /// Tonnetz transformation types (PLR operations)
-#[derive(Clone, Encode, Decode, TypeInfo, RuntimeDebug, PartialEq)]
+#[derive(Clone, Encode, Decode, TypeInfo, RuntimeDebug, PartialEq, MaxEncodedLen)]
 pub enum TonnetzTransform {
 	/// Parallel transformation (minor to major)
 	Parallel,
@@ -78,7 +79,7 @@ pub enum TonnetzTransform {
 }
 
 /// Phase transition types
-#[derive(Clone, Encode, Decode, TypeInfo, RuntimeDebug, PartialEq)]
+#[derive(Clone, Encode, Decode, TypeInfo, RuntimeDebug, PartialEq, MaxEncodedLen)]
 pub enum TransitionType {
 	/// Constructive interference
 	Constructive,

@@ -1,7 +1,7 @@
 use crate::{Config, Pallet};
 use frame_support::traits::Get;
 use sp_runtime::offchain::{http, Timestamp};
-use sp_std::vec::Vec;
+use sp_std::{vec::Vec, vec};
 
 impl<T: Config> Pallet<T> {
     /// Fetch quantum entropy from KIRQ Hub service
@@ -30,7 +30,7 @@ impl<T: Config> Pallet<T> {
         let response = request.wait()
             .map_err(|_| "Request timeout")?;
         
-        if response.code != 200 {
+        if response.code != 200u16 {
             return Err("KIRQ service error");
         }
         

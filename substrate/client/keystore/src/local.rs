@@ -22,7 +22,7 @@ use parking_lot::RwLock;
 use sp_application_crypto::{AppCrypto, AppPair, IsWrappedBy};
 use sp_core::{
 	crypto::{ByteArray, ExposeSecret, KeyTypeId, Pair as CorePair, SecretString, VrfSecret},
-	ecdsa, ed25519, sr25519,
+	ecdsa, ed25519, sr25519, sphincs,
 };
 use sp_keystore::{Error as TraitError, Keystore, KeystorePtr};
 use std::{
@@ -433,6 +433,33 @@ impl Keystore for LocalKeystore {
 			.map(|pair| pair.sign_with_hasher::<KeccakHasher>(msg));
 			Ok(sig)
 		}
+	}
+
+	fn sphincs_public_keys(&self, _key_type: KeyTypeId) -> Vec<sphincs::Public> {
+		// TODO: Complete SPHINCS+ implementation - provides both SPHINCS+ and Falcon-512
+		// for bandwidth-aware post-quantum crypto selection (satellite communications)
+		Vec::new()
+	}
+
+	fn sphincs_generate_new(
+		&self,
+		key_type: KeyTypeId,
+		_seed: Option<&str>,
+	) -> std::result::Result<sphincs::Public, TraitError> {
+		// TODO: Complete SPHINCS+ implementation - provides both SPHINCS+ and Falcon-512
+		// for bandwidth-aware post-quantum crypto selection (satellite communications)
+		Err(TraitError::KeyNotSupported(key_type))
+	}
+
+	fn sphincs_sign(
+		&self,
+		_key_type: KeyTypeId,
+		_public: &sphincs::Public,
+		_msg: &[u8],
+	) -> std::result::Result<Option<sphincs::Signature>, TraitError> {
+		// TODO: Complete SPHINCS+ implementation - provides both SPHINCS+ and Falcon-512
+		// for bandwidth-aware post-quantum crypto selection (satellite communications)
+		Ok(None)
 	}
 }
 

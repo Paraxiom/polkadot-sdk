@@ -19,7 +19,13 @@
 //!
 //! This module provides quantum-resistant digital signatures using the SPHINCS+ algorithm,
 //! which is one of the NIST standardized post-quantum signature schemes.
+//!
+//! SPHINCS+ provides the highest security guarantees as it relies only on hash functions,
+//! but has large signatures (17-49 KB) making it unsuitable for bandwidth-constrained
+//! applications. Use for critical operations only.
 
+use alloc::{vec::Vec, vec, string::String, format};
+use core::convert::TryFrom;
 #[cfg(feature = "serde")]
 use crate::crypto::Ss58Codec;
 use crate::crypto::{
@@ -27,15 +33,11 @@ use crate::crypto::{
 	Public as PublicTrait, Signature as SignatureTrait,
 	SecretStringError, UncheckedFrom,
 };
-
-use alloc::vec::Vec;
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 
 #[cfg(feature = "serde")]
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
-
-use sp_std::convert::TryFrom;
 
 /// SPHINCS+ public key size (64 bytes for SPHINCS+-256)
 pub const PUBLIC_KEY_SERIALIZED_SIZE: usize = 64;
@@ -306,6 +308,7 @@ impl TraitPair for Pair {
 		self.public
 	}
 
+	#[cfg(feature = "full_crypto")]
 	fn sign(&self, _message: &[u8]) -> Self::Signature {
 		// In real implementation, use SPHINCS+ signing
 		// For now, return a dummy signature
@@ -365,5 +368,29 @@ mod tests {
 		let message = b"Something important";
 		let signature = pair.sign(&message[..]);
 		assert!(Pair::verify(&signature, &message[..], &public));
+	}
+
+	#[test]
+	fn test_signature_size_for_satellite() {
+		// Verify SPHINCS+ has large signatures unsuitable for satellites
+		assert_eq!(SIGNATURE_SERIALIZED_SIZE, 49856);
+		assert!(SIGNATURE_SERIALIZED_SIZE > 17000); // More than 17KB
+		
+		// At 9.6 kbps, this would take ~41 seconds to transmit!
+		let bits = SIGNATURE_SERIALIZED_SIZE * 8;
+		let transmission_time_sec = bits as f32 / 9600.0;
+		assert!(transmission_time_sec > 30.0);
+	}
+}
+
+// Implement comparison traits for satellite bandwidth analysis
+#[cfg(feature = "full_crypto")]
+impl crate::post_quantum::PostQuantumSignature for Signature {
+	fn algorithm(&self) -> crate::post_quantum::PostQuantumAlgorithm {
+		crate::post_quantum::PostQuantumAlgorithm::SphincsPlus
+	}
+	
+	fn size(&self) -> usize {
+		SIGNATURE_SERIALIZED_SIZE
 	}
 }

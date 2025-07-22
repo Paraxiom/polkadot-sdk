@@ -20,7 +20,7 @@
 //! This module provides traits and types for integrating quantum random number
 //! generators (QRNGs) and quantum key distribution (QKD) systems with Substrate.
 
-use alloc::vec::Vec;
+use alloc::{vec::Vec, vec};
 use codec::{Decode, Encode};
 use scale_info::TypeInfo;
 
@@ -109,11 +109,9 @@ impl QuantumRandomness for MockQuantumRandomness {
 }
 
 /// Hybrid randomness that combines classical and quantum sources.
-pub struct HybridRandomness<C: crate::traits::SpawnNamed> {
-	_phantom: sp_std::marker::PhantomData<C>,
-}
+pub struct HybridRandomness;
 
-impl<C: crate::traits::SpawnNamed> HybridRandomness<C> {
+impl HybridRandomness {
 	/// Generate random bytes using both classical and quantum sources.
 	pub fn random_hybrid(num_bytes: usize) -> Vec<u8> {
 		let mut result = vec![0u8; num_bytes];

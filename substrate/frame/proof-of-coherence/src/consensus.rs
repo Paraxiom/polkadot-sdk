@@ -10,6 +10,7 @@ use crate::{Config, Pallet, Validators, CoherenceScores, NetworkHarmonicState};
 use sp_runtime::traits::{Block as BlockT, Header as HeaderT};
 use sp_std::vec::Vec;
 use codec::{Decode, Encode};
+use frame_support::traits::Get;
 
 /// Proof of Coherence consensus data included in blocks
 #[derive(Clone, Encode, Decode)]

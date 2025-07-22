@@ -283,6 +283,7 @@ impl NetworkParams {
 			ipfs_server: self.ipfs_server,
 			sync_mode: self.sync.into(),
 			network_backend: self.network_backend.into(),
+			qkd_config: Default::default(),
 		}
 	}
 }

@@ -60,12 +60,13 @@ pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
+	use frame_support::traits::Currency;
 	use sp_runtime::traits::{Zero, Saturating};
 	use sp_std::{vec::Vec, collections::btree_map::BTreeMap};
-	use sp_core::H256;
-	use pallet_quantum_crypto::QuantumRandomness;
+	use sp_core::{H256, quantum_randomness::QuantumRandomness};
 	
 	#[pallet::pallet]
+	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 	
 	#[pallet::config]
@@ -105,7 +106,6 @@ pub mod pallet {
 	
 	/// Coherence proofs submitted by validators
 	#[pallet::storage]
-	#[pallet::getter(fn coherence_proofs)]
 	pub type CoherenceProofs<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
@@ -153,7 +153,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		T::AccountId,
-		PhaseData,
+		PhaseData<BlockNumberFor<T>>,
 		OptionQuery,
 	>;
 	
@@ -163,7 +163,10 @@ pub mod pallet {
 		/// Validator registered for coherence consensus
 		ValidatorRegistered {
 			who: T::AccountId,
-			tonnetz_position: TonnetzPosition,
+			tonnetz_x: i8,
+			tonnetz_y: i8,
+			tonnetz_z: i8,
+			pitch_class: u8,
 		},
 		
 		/// Coherence proof submitted
@@ -181,7 +184,10 @@ pub mod pallet {
 		
 		/// Network harmonic state updated
 		NetworkHarmonicUpdated {
-			new_state: HarmonicState,
+			fundamental_frequency: u32,
+			phase_offset: u32,
+			coherence_level: u8,
+			resonance_nodes: u8,
 			participating_validators: u32,
 		},
 		
@@ -193,9 +199,9 @@ pub mod pallet {
 		
 		/// Phase transition in network harmonics
 		PhaseTransition {
-			from_state: HarmonicState,
-			to_state: HarmonicState,
-			transition_type: TransitionType,
+			from_coherence_level: u8,
+			to_coherence_level: u8,
+			transition_constructive: bool,
 		},
 		
 		/// Coherence reward distributed
@@ -267,7 +273,10 @@ pub mod pallet {
 			
 			Self::deposit_event(Event::ValidatorRegistered {
 				who,
-				tonnetz_position,
+				tonnetz_x: tonnetz_position.x,
+				tonnetz_y: tonnetz_position.y,
+				tonnetz_z: tonnetz_position.z,
+				pitch_class: tonnetz_position.pitch_class,
 			});
 			
 			Ok(())
@@ -329,7 +338,7 @@ pub mod pallet {
 		#[pallet::weight(Weight::from_parts(30_000, 0))]
 		pub fn harmonic_transform(
 			origin: OriginFor<T>,
-			transform_type: TonnetzTransform,
+			transform_type: u8, // 0 = Parallel, 1 = LeadingTone, 2 = Relative
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			
@@ -337,14 +346,22 @@ pub mod pallet {
 			let mut position = TonnetzPositions::<T>::get(&who)
 				.ok_or(Error::<T>::NotValidator)?;
 			
+			// Convert u8 to enum
+			let transform = match transform_type {
+				0 => TonnetzTransform::Parallel,
+				1 => TonnetzTransform::LeadingTone,
+				2 => TonnetzTransform::Relative,
+				_ => return Err(Error::<T>::InvalidTonnetzPosition.into()),
+			};
+			
 			// Apply transformation
-			position = Self::apply_tonnetz_transform(position, transform_type);
+			position = Self::apply_tonnetz_transform(position, transform);
 			
 			// Verify new position is valid
 			ensure!(Self::is_valid_tonnetz_position(&position), Error::<T>::InvalidTonnetzPosition);
 			
 			// Update position
-			TonnetzPositions::<T>::insert(&who, position);
+			TonnetzPositions::<T>::insert(&who, position.clone());
 			
 			// Check for harmonic resonance
 			if let Some(harmonic_level) = Self::check_harmonic_resonance(&who, &position) {
@@ -409,9 +426,9 @@ pub mod pallet {
 			if Self::detect_phase_transition(&old_state, &new_state) {
 				let transition_type = Self::classify_transition(&old_state, &new_state);
 				Self::deposit_event(Event::PhaseTransition {
-					from_state: old_state,
-					to_state: new_state.clone(),
-					transition_type,
+					from_coherence_level: old_state.coherence_level,
+					to_coherence_level: new_state.coherence_level,
+					transition_constructive: matches!(transition_type, TransitionType::Constructive),
 				});
 			}
 			
@@ -420,7 +437,10 @@ pub mod pallet {
 			LastCoherenceCheck::<T>::put(current_block);
 			
 			Self::deposit_event(Event::NetworkHarmonicUpdated {
-				new_state,
+				fundamental_frequency: new_state.fundamental_frequency,
+				phase_offset: new_state.phase_offset,
+				coherence_level: new_state.coherence_level,
+				resonance_nodes: new_state.resonance_nodes,
 				participating_validators: participating,
 			});
 			

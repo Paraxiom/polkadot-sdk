@@ -13,7 +13,8 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.6.12", default-features = false, features = ["derive"] }
-scale-info = { version = "2.11.1", default-features = false, features = ["derive"] }
+scale-info = { version = "2.11.1", default-features = false, features = ["derive", "serde"] }
+serde = { version = "1.0.197", default-features = false, features = ["derive", "alloc"] }
 
 # Substrate
 frame-benchmarking = { path = "../benchmarking", default-features = false, optional = true }
@@ -43,6 +44,7 @@ default = ["std"]
 std = [
     "codec/std",
     "scale-info/std",
+    "serde/std",
     "frame-benchmarking?/std",
     "frame-support/std",
     "frame-system/std",

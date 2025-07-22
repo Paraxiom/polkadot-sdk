@@ -7954,19 +7954,6 @@ dependencies = [
 
 [[package]]
 name = "hyper-tls"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6183ddfa99b85da61a140bea0efc93fdf56ceaa041b37d553518030827f9905"
-dependencies = [
- "bytes",
- "hyper 0.14.29",
- "native-tls",
- "tokio",
- "tokio-native-tls",
-]
-
-[[package]]
-name = "hyper-tls"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "70206fc6890eaca9fde8a0bf71caa2ddfc9fe045ac9e5c70df101a7dbde866e0"
@@ -12789,6 +12776,7 @@ dependencies = [
  "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
+ "serde",
  "sp-core 28.0.0",
  "sp-io",
  "sp-runtime",
@@ -12815,7 +12803,6 @@ dependencies = [
  "frame-support",
  "frame-system",
  "parity-scale-codec",
- "pqcrypto-sphincsplus",
  "rand_core 0.6.4",
  "scale-info",
  "sha3",
@@ -17146,37 +17133,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b40af805b3121feab8a3c29f04d8ad262fa8e0561883e7653e024ae4479e6de"
 
 [[package]]
-name = "pqcrypto-internals"
-version = "0.2.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f408e9e302fffe05f781c95777cb36bbfc51daccf518c28c5829d49a989df22"
-dependencies = [
- "cc",
- "dunce",
- "getrandom 0.2.10",
- "libc",
-]
-
-[[package]]
-name = "pqcrypto-sphincsplus"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "798d17f2175adcde1fffd0262a8d1935fdd397516ef9a921cdc552fe6780861a"
-dependencies = [
- "cc",
- "glob",
- "libc",
- "pqcrypto-internals",
- "pqcrypto-traits",
-]
-
-[[package]]
-name = "pqcrypto-traits"
-version = "0.3.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94e851c7654eed9e68d7d27164c454961a616cf8c203d500607ef22c737b51bb"
-
-[[package]]
 name = "predicates"
 version = "3.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -18142,15 +18098,15 @@ dependencies = [
  "http 0.2.9",
  "http-body 0.4.5",
  "hyper 0.14.29",
- "hyper-tls 0.5.0",
+ "hyper-rustls 0.24.2",
  "ipnet",
  "js-sys",
  "log",
  "mime",
- "native-tls",
  "once_cell",
  "percent-encoding",
  "pin-project-lite",
+ "rustls 0.21.7",
  "rustls-pemfile 1.0.3",
  "serde",
  "serde_json",
@@ -18158,12 +18114,13 @@ dependencies = [
  "sync_wrapper 0.1.2",
  "system-configuration 0.5.1",
  "tokio",
- "tokio-native-tls",
+ "tokio-rustls 0.24.1",
  "tower-service",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
+ "webpki-roots 0.25.2",
  "winreg",
 ]
 
@@ -18185,7 +18142,7 @@ dependencies = [
  "http-body-util",
  "hyper 1.6.0",
  "hyper-rustls 0.27.3",
- "hyper-tls 0.6.0",
+ "hyper-tls",
  "hyper-util",
  "ipnet",
  "js-sys",
@@ -19747,6 +19704,7 @@ dependencies = [
  "fnv",
  "futures",
  "futures-timer",
+ "hex",
  "ip_network",
  "libp2p",
  "linked_hash_set",
@@ -19787,6 +19745,7 @@ dependencies = [
  "tokio-stream",
  "tokio-util",
  "unsigned-varint 0.7.2",
+ "uuid",
  "void",
  "wasm-timer",
  "zeroize",
@@ -22567,7 +22526,6 @@ dependencies = [
  "parity-scale-codec",
  "parking_lot 0.12.3",
  "paste",
- "pqcrypto-sphincsplus",
  "primitive-types 0.13.1",
  "rand 0.8.5",
  "regex",

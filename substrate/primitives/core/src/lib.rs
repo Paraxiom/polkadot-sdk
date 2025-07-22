@@ -80,6 +80,8 @@ pub mod ed25519;
 pub mod paired_crypto;
 pub mod sr25519;
 pub mod sphincs;
+pub mod falcon;
+pub mod post_quantum;
 pub mod quantum_randomness;
 
 #[cfg(feature = "bls-experimental")]

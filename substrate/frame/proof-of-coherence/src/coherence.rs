@@ -112,9 +112,9 @@ impl CoherenceVerifier {
 	}
 	
 	/// Verify phase synchronization between validators
-	pub fn verify_phase_sync(
+	pub fn verify_phase_sync<BlockNumber>(
 		&self,
-		phase_data: &[PhaseData],
+		phase_data: &[PhaseData<BlockNumber>],
 		network_state: &HarmonicState,
 	) -> bool {
 		if phase_data.is_empty() {
