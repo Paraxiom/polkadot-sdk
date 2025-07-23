@@ -64,6 +64,42 @@ pub mod ed25519 {
 	pub type AuthorityId = app_ed25519::Public;
 }
 
+pub mod sphincs {
+	mod app_sphincs {
+		use sp_application_crypto::{app_crypto, key_types::AURA, sphincs};
+		app_crypto!(sphincs, AURA);
+	}
+
+	sp_application_crypto::with_pair! {
+		/// An Aura authority keypair using SPHINCS+ as its crypto (quantum-safe).
+		pub type AuthorityPair = app_sphincs::Pair;
+	}
+
+	/// An Aura authority signature using SPHINCS+ as its crypto (quantum-safe).
+	pub type AuthoritySignature = app_sphincs::Signature;
+
+	/// An Aura authority identifier using SPHINCS+ as its crypto (quantum-safe).
+	pub type AuthorityId = app_sphincs::Public;
+}
+
+pub mod falcon {
+	mod app_falcon {
+		use sp_application_crypto::{app_crypto, falcon, key_types::AURA};
+		app_crypto!(falcon, AURA);
+	}
+
+	sp_application_crypto::with_pair! {
+		/// An Aura authority keypair using Falcon-512 as its crypto (quantum-safe, bandwidth-optimized).
+		pub type AuthorityPair = app_falcon::Pair;
+	}
+
+	/// An Aura authority signature using Falcon-512 as its crypto (quantum-safe, bandwidth-optimized).
+	pub type AuthoritySignature = app_falcon::Signature;
+
+	/// An Aura authority identifier using Falcon-512 as its crypto (quantum-safe, bandwidth-optimized).
+	pub type AuthorityId = app_falcon::Public;
+}
+
 pub use sp_consensus_slots::{Slot, SlotDuration};
 
 /// The `ConsensusEngineId` of AuRa.

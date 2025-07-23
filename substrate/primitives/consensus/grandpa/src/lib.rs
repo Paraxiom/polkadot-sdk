@@ -58,6 +58,48 @@ pub type AuthorityId = app::Public;
 /// Signature for a Grandpa authority.
 pub type AuthoritySignature = app::Signature;
 
+/// Post-quantum GRANDPA types using SPHINCS+
+pub mod sphincs {
+	use sp_application_crypto::{app_crypto, sphincs, key_types::GRANDPA};
+	
+	mod app_sphincs {
+		use super::*;
+		app_crypto!(sphincs, GRANDPA);
+	}
+	
+	sp_application_crypto::with_pair! {
+		/// The quantum-safe GRANDPA crypto scheme using SPHINCS+.
+		pub type AuthorityPair = app_sphincs::Pair;
+	}
+	
+	/// Identity of a quantum-safe GRANDPA authority.
+	pub type AuthorityId = app_sphincs::Public;
+	
+	/// Signature for a quantum-safe GRANDPA authority.
+	pub type AuthoritySignature = app_sphincs::Signature;
+}
+
+/// Post-quantum GRANDPA types using Falcon-512 (bandwidth-optimized)
+pub mod falcon {
+	use sp_application_crypto::{app_crypto, falcon, key_types::GRANDPA};
+	
+	mod app_falcon {
+		use super::*;
+		app_crypto!(falcon, GRANDPA);
+	}
+	
+	sp_application_crypto::with_pair! {
+		/// The quantum-safe GRANDPA crypto scheme using Falcon-512.
+		pub type AuthorityPair = app_falcon::Pair;
+	}
+	
+	/// Identity of a quantum-safe GRANDPA authority (bandwidth-optimized).
+	pub type AuthorityId = app_falcon::Public;
+	
+	/// Signature for a quantum-safe GRANDPA authority (bandwidth-optimized).
+	pub type AuthoritySignature = app_falcon::Signature;
+}
+
 /// The `ConsensusEngineId` of GRANDPA.
 pub const GRANDPA_ENGINE_ID: ConsensusEngineId = *b"FRNK";
 
