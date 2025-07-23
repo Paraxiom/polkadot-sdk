@@ -283,6 +283,7 @@ impl TraitPair for Pair {
 		self.public.clone()
 	}
 
+	#[cfg(feature = "full_crypto")]
 	fn sign(&self, message: &[u8]) -> Self::Signature {
 		self.sign(message)
 	}
