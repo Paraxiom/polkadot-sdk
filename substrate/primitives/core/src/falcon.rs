@@ -22,7 +22,7 @@
 //! offers compact signatures (690 bytes) making it ideal for bandwidth-constrained
 //! applications like satellite communications.
 
-use alloc::vec::Vec;
+use alloc::{vec::Vec, string::String, format};
 use core::convert::TryFrom;
 #[cfg(feature = "serde")]
 use crate::crypto::Ss58Codec;
