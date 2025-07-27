@@ -28,7 +28,9 @@ use crate::crypto::{
 	SecretStringError, UncheckedFrom,
 };
 
-use alloc::vec::Vec;
+use alloc::{vec::Vec, format};
+#[cfg(feature = "serde")]
+use alloc::string::String;
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 
@@ -306,6 +308,7 @@ impl TraitPair for Pair {
 		self.public
 	}
 
+	#[cfg(feature = "full_crypto")]
 	fn sign(&self, _message: &[u8]) -> Self::Signature {
 		// In real implementation, use SPHINCS+ signing
 		// For now, return a dummy signature
