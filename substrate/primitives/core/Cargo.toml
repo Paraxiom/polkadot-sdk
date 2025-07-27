@@ -48,22 +48,22 @@ sp-storage = { workspace = true }
 ss58-registry = { workspace = true }
 substrate-bip39 = { workspace = true }
 thiserror = { optional = true, workspace = true }
-pqcrypto-sphincsplus = { version = "0.7.1", default-features = false }
+pqcrypto-sphincsplus = { version = "0.7.1", default-features = false, optional = true }
 tracing = { optional = true, workspace = true, default-features = true }
 zeroize = { workspace = true }
 
 # full crypto
 array-bytes = { workspace = true, default-features = true }
 blake2 = { optional = true, workspace = true }
-ed25519-zebra = { workspace = true }
-libsecp256k1 = { features = ["static-context"], workspace = true }
+# ed25519-zebra = { workspace = true } # Removed for quantum-safety
+# libsecp256k1 = { features = ["static-context"], workspace = true } # Removed for quantum-safety
 merlin = { workspace = true }
-schnorrkel = { features = ["preaudit_deprecated"], workspace = true }
+# schnorrkel = { features = ["preaudit_deprecated"], workspace = true } # Removed for quantum-safety (sr25519)
 sp-crypto-hashing = { workspace = true }
 # k256 crate, better portability, intended to be used in substrate-runtimes (no-std)
-k256 = { features = ["alloc", "ecdsa"], workspace = true }
+# k256 = { features = ["alloc", "ecdsa"], workspace = true } # Removed for quantum-safety
 # secp256k1 crate, better performance, intended to be used on host side (std)
-secp256k1 = { features = ["alloc", "recovery"], optional = true, workspace = true }
+# secp256k1 = { features = ["alloc", "recovery"], optional = true, workspace = true } # Removed for quantum-safety
 
 # bls crypto
 sha2 = { optional = true, workspace = true }
@@ -92,7 +92,7 @@ std = [
 	"bounded-collections/std",
 	"bs58/std",
 	"codec/std",
-	"ed25519-zebra/std",
+	# "ed25519-zebra/std", # Removed for quantum-safety
 	"full_crypto",
 	"futures/std",
 	"futures/thread-pool",
@@ -100,8 +100,8 @@ std = [
 	"hash256-std-hasher/std",
 	"impl-serde/std",
 	"itertools",
-	"k256/std",
-	"libsecp256k1/std",
+	# "k256/std", # Removed for quantum-safety
+	# "libsecp256k1/std", # Removed for quantum-safety
 	"log/std",
 	"merlin/std",
 	"parking_lot",
@@ -111,9 +111,9 @@ std = [
 	"primitive-types/std",
 	"rand",
 	"scale-info/std",
-	"schnorrkel/std",
-	"secp256k1/global-context",
-	"secp256k1/std",
+	# "schnorrkel/std", # Removed for quantum-safety
+	# "secp256k1/global-context", # Removed for quantum-safety
+	# "secp256k1/std", # Removed for quantum-safety
 	"serde/std",
 	"sha2?/std",
 	"sp-crypto-hashing/std",
@@ -137,7 +137,7 @@ serde = [
 	"bs58/alloc",
 	"dep:serde",
 	"impl-serde",
-	"k256/serde",
+	# "k256/serde", # Removed for quantum-safety
 	"primitive-types/serde_no_std",
 	"scale-info/serde",
 	"sp-storage/serde",

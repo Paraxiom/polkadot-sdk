@@ -75,10 +75,10 @@ pub mod bandersnatch;
 #[cfg(feature = "bls-experimental")]
 pub mod bls;
 pub mod crypto_bytes;
-pub mod ecdsa;
-pub mod ed25519;
+// pub mod ecdsa; // Removed for quantum-safety
+// pub mod ed25519; // Removed for quantum-safety
 pub mod paired_crypto;
-pub mod sr25519;
+// pub mod sr25519; // Removed for quantum-safety
 pub mod sphincs;
 pub mod quantum_randomness;
 
