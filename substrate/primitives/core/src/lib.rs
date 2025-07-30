@@ -75,12 +75,19 @@ pub mod bandersnatch;
 #[cfg(feature = "bls-experimental")]
 pub mod bls;
 pub mod crypto_bytes;
-// pub mod ecdsa; // Removed for quantum-safety
-// pub mod ed25519; // Removed for quantum-safety
+// Quantum-safe stub implementation for API compatibility
+#[path = "ecdsa_stub.rs"]
+pub mod ecdsa;
+// Quantum-safe stub implementation for API compatibility
+#[path = "ed25519_stub.rs"]
+pub mod ed25519;
 pub mod paired_crypto;
-// pub mod sr25519; // Removed for quantum-safety
+// Quantum-safe stub implementation for API compatibility
+#[path = "sr25519_stub.rs"]
+pub mod sr25519;
 pub mod sphincs;
 pub mod quantum_randomness;
+pub mod quantum_signature;
 
 #[cfg(feature = "bls-experimental")]
 pub use bls::{bls377, bls381};
@@ -92,6 +99,7 @@ pub use self::{
 	uint::{U256, U512},
 };
 pub use crypto::{ByteArray, DeriveJunction, Pair, Public};
+pub use quantum_signature::{QuantumSignature, QuantumPublic, QuantumSigner};
 
 #[cfg(not(substrate_runtime))]
 pub use self::hasher::blake2::Blake2Hasher;

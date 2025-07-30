@@ -76,7 +76,7 @@ use sp_core::{
 	crypto::{self, ByteArray, FromEntropy},
 	ecdsa, ed25519,
 	hash::{H256, H512},
-	sr25519, sphincs,
+	sr25519,
 };
 
 use alloc::vec;
@@ -290,8 +290,6 @@ pub enum MultiSignature {
 	Sr25519(sr25519::Signature),
 	/// An ECDSA/SECP256k1 signature.
 	Ecdsa(ecdsa::Signature),
-	/// A SPHINCS+ signature (quantum-safe).
-	SphincsPlus(sphincs::Signature),
 }
 
 impl From<ed25519::Signature> for MultiSignature {
@@ -345,23 +343,6 @@ impl TryFrom<MultiSignature> for ecdsa::Signature {
 	}
 }
 
-impl From<sphincs::Signature> for MultiSignature {
-	fn from(x: sphincs::Signature) -> Self {
-		Self::SphincsPlus(x)
-	}
-}
-
-impl TryFrom<MultiSignature> for sphincs::Signature {
-	type Error = ();
-	fn try_from(m: MultiSignature) -> Result<Self, Self::Error> {
-		if let MultiSignature::SphincsPlus(x) = m {
-			Ok(x)
-		} else {
-			Err(())
-		}
-	}
-}
-
 /// Public key for any known crypto algorithm.
 #[derive(
 	Eq,
@@ -383,17 +364,14 @@ pub enum MultiSigner {
 	Sr25519(sr25519::Public),
 	/// An SECP256k1/ECDSA identity (actually, the Blake2 hash of the compressed pub key).
 	Ecdsa(ecdsa::Public),
-	/// A SPHINCS+ identity (quantum-safe).
-	SphincsPlus(sphincs::Public),
 }
 
 impl FromEntropy for MultiSigner {
 	fn from_entropy(input: &mut impl codec::Input) -> Result<Self, codec::Error> {
-		Ok(match input.read_byte()? % 4 {
+		Ok(match input.read_byte()? % 3 {
 			0 => Self::Ed25519(FromEntropy::from_entropy(input)?),
 			1 => Self::Sr25519(FromEntropy::from_entropy(input)?),
-			2 => Self::Ecdsa(FromEntropy::from_entropy(input)?),
-			3.. => Self::SphincsPlus(FromEntropy::from_entropy(input)?),
+			2.. => Self::Ecdsa(FromEntropy::from_entropy(input)?),
 		})
 	}
 }
@@ -402,9 +380,7 @@ impl FromEntropy for MultiSigner {
 /// we convert the hash into some AccountId, it's fine to use any scheme.
 impl<T: Into<H256>> crypto::UncheckedFrom<T> for MultiSigner {
 	fn unchecked_from(x: T) -> Self {
-		let h256: H256 = x.into();
-		let bytes: [u8; 32] = h256.into();
-		ed25519::Public::unchecked_from(bytes).into()
+		ed25519::Public::unchecked_from(x.into()).into()
 	}
 }
 
@@ -414,7 +390,6 @@ impl AsRef<[u8]> for MultiSigner {
 			Self::Ed25519(ref who) => who.as_ref(),
 			Self::Sr25519(ref who) => who.as_ref(),
 			Self::Ecdsa(ref who) => who.as_ref(),
-			Self::SphincsPlus(ref who) => who.as_ref(),
 		}
 	}
 }
@@ -426,7 +401,6 @@ impl traits::IdentifyAccount for MultiSigner {
 			Self::Ed25519(who) => <[u8; 32]>::from(who).into(),
 			Self::Sr25519(who) => <[u8; 32]>::from(who).into(),
 			Self::Ecdsa(who) => sp_io::hashing::blake2_256(who.as_ref()).into(),
-			Self::SphincsPlus(who) => sp_io::hashing::blake2_256(who.as_ref()).into(),
 		}
 	}
 }
@@ -482,23 +456,6 @@ impl TryFrom<MultiSigner> for ecdsa::Public {
 	}
 }
 
-impl From<sphincs::Public> for MultiSigner {
-	fn from(x: sphincs::Public) -> Self {
-		Self::SphincsPlus(x)
-	}
-}
-
-impl TryFrom<MultiSigner> for sphincs::Public {
-	type Error = ();
-	fn try_from(m: MultiSigner) -> Result<Self, Self::Error> {
-		if let MultiSigner::SphincsPlus(x) = m {
-			Ok(x)
-		} else {
-			Err(())
-		}
-	}
-}
-
 #[cfg(feature = "std")]
 impl std::fmt::Display for MultiSigner {
 	fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -506,7 +463,6 @@ impl std::fmt::Display for MultiSigner {
 			Self::Ed25519(who) => write!(fmt, "ed25519: {}", who),
 			Self::Sr25519(who) => write!(fmt, "sr25519: {}", who),
 			Self::Ecdsa(who) => write!(fmt, "ecdsa: {}", who),
-			Self::SphincsPlus(who) => write!(fmt, "sphincs+: {}", who),
 		}
 	}
 }
@@ -520,19 +476,8 @@ impl Verify for MultiSignature {
 			Self::Sr25519(sig) => sig.verify(msg, &who.into()),
 			Self::Ecdsa(sig) => {
 				let m = sp_io::hashing::blake2_256(msg.get());
-				let sig_bytes = sig.as_ref();
-				if sig_bytes.len() != 65 {
-					return false;
-				}
-				let mut sig_array = [0u8; 65];
-				sig_array.copy_from_slice(sig_bytes);
-				sp_io::crypto::secp256k1_ecdsa_recover_compressed(&sig_array, &m)
+				sp_io::crypto::secp256k1_ecdsa_recover_compressed(sig.as_ref(), &m)
 					.map_or(false, |pubkey| sp_io::hashing::blake2_256(&pubkey) == who)
-			},
-			Self::SphincsPlus(sig) => {
-				// For SPHINCS+, we need to recover the public key from the account ID
-				// This is a simplified verification - in production, you'd store the full public key
-				sig.verify(msg.get(), &sphincs::Public::from_account_id(who))
 			},
 		}
 	}

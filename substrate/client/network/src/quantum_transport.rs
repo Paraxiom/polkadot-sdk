@@ -149,8 +149,8 @@ where
 		self.inner.remove_listener(id)
 	}
 
-	fn dial(&mut self, addr: Multiaddr) -> Result<Self::Dial, TransportError<Self::Error>> {
-		let dial = self.inner.dial(addr)?;
+	fn dial(&mut self, addr: Multiaddr, opts: libp2p::core::transport::DialOpts) -> Result<Self::Dial, TransportError<Self::Error>> {
+		let dial = self.inner.dial(addr, opts)?;
 		let qkd_client = self.qkd_client.clone();
 		let quantum_keys = self.quantum_keys.clone();
 		
@@ -165,25 +165,14 @@ where
 		}))
 	}
 
-	fn dial_as_listener(
-		&mut self,
-		addr: Multiaddr,
-	) -> Result<Self::Dial, TransportError<Self::Error>> {
-		let dial = self.inner.dial_as_listener(addr)?;
-		let qkd_client = self.qkd_client.clone();
-		
-		Ok(Box::pin(async move {
-			let output = dial.await?;
-			let quantum_key = None; // Placeholder
-			Ok((output, quantum_key))
-		}))
-	}
+	// dial_as_listener removed in newer libp2p versions
+	// Quantum key exchange happens during handshake instead
 
 	fn poll(
 		mut self: Pin<&mut Self>,
 		cx: &mut Context<'_>,
 	) -> Poll<TransportEvent<Self::ListenerUpgrade, Self::Error>> {
-		match self.inner.poll_unpin(cx) {
+		match Pin::new(&mut self.inner).poll(cx) {
 			Poll::Ready(event) => {
 				let event = event.map_upgrade(|upgrade| {
 					let qkd_client = self.qkd_client.clone();
@@ -199,9 +188,7 @@ where
 		}
 	}
 
-	fn address_translation(&self, listen: &Multiaddr, observed: &Multiaddr) -> Option<Multiaddr> {
-		self.inner.address_translation(listen, observed)
-	}
+	// address_translation removed in newer libp2p versions
 }
 
 /// Check if address supports QKD

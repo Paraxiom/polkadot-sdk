@@ -103,7 +103,7 @@ pub fn build_quantum_transport(
 		
 		// Map the output to extract just the base output, discarding quantum key for now
 		let mapped = quantum_transport
-			.map(|(output, _quantum_key)| output)
+			.map(|output, _quantum_key| output)
 			.boxed();
 			
 		(mapped, bandwidth)

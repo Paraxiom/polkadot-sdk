@@ -35,16 +35,20 @@ use sp_runtime::{traits::Header, ConsensusEngineId, RuntimeDebug};
 
 use crate::digests::{NextConfigDescriptor, NextEpochDescriptor};
 
-pub use sp_core::sr25519::vrf::{
-	VrfInput, VrfPreOutput, VrfProof, VrfSignData, VrfSignature, VrfTranscript,
-};
+// VRF temporarily disabled for quantum migration - placeholder types
+pub type VrfInput = [u8; 32];
+pub type VrfPreOutput = [u8; 32];
+pub type VrfProof = [u8; 64];
+pub type VrfSignData = ([u8; 32], [u8; 32], [u8; 64]);
+pub type VrfSignature = [u8; 96];
+pub struct VrfTranscript(Vec<u8>);
 
 /// Key type for BABE module.
 pub const KEY_TYPE: sp_core::crypto::KeyTypeId = sp_application_crypto::key_types::BABE;
 
 mod app {
-	use sp_application_crypto::{app_crypto, key_types::BABE, sr25519};
-	app_crypto!(sr25519, BABE);
+	use sp_application_crypto::{app_crypto, key_types::BABE, bandersnatch};
+	app_crypto!(bandersnatch, BABE);
 }
 
 /// VRF context used for per-slot randomness generation.

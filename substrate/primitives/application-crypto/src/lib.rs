@@ -49,12 +49,13 @@ pub use serde;
 pub mod bandersnatch;
 #[cfg(feature = "bls-experimental")]
 pub mod bls381;
-pub mod ecdsa;
+// pub mod ecdsa; // Removed for quantum-safety
 #[cfg(feature = "bls-experimental")]
-pub mod ecdsa_bls381;
-pub mod ed25519;
-pub mod sr25519;
+// pub mod ecdsa_bls381; // Removed for quantum-safety (depends on ecdsa)
+// pub mod ed25519; // Removed for quantum-safety
+// pub mod sr25519; // Removed for quantum-safety
 pub mod sphincs;
+pub mod sphincs_simple;
 mod traits;
 
 pub use traits::*;

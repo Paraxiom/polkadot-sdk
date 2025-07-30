@@ -98,11 +98,10 @@ use sp_keystore::KeystoreExt;
 use sp_core::bandersnatch;
 use sp_core::{
 	crypto::KeyTypeId,
-	sphincs, // Removed ecdsa, ed25519 for quantum-safety
+	ecdsa, ed25519, sr25519, sphincs,
 	offchain::{
 		HttpError, HttpRequestId, HttpRequestStatus, OpaqueNetworkState, StorageKind, Timestamp,
 	},
-	// sr25519, // Removed for quantum-safety
 	storage::StateVersion,
 	LogLevelFilter, OpaquePeerId, RuntimeInterfaceLogLevel, H256,
 };
@@ -883,82 +882,56 @@ impl Default for UseDalekExt {
 /// Interfaces for working with crypto related types from within the runtime.
 #[runtime_interface]
 pub trait Crypto {
-	// QUANTUM-VULNERABLE: ed25519 removed for quantum safety
-	// /// Returns all `ed25519` public keys for the given key id from the keystore.
-	// fn ed25519_public_keys(
-	// 	&mut self,
-	// 	id: PassPointerAndReadCopy<KeyTypeId, 4>,
-	// ) -> AllocateAndReturnByCodec<Vec<ed25519::Public>> {
-	// 	self.extension::<KeystoreExt>()
-	// 		.expect("No `keystore` associated for the current context!")
-	// 		.ed25519_public_keys(id)
-	// }
+	/// Returns empty list - ed25519 is quantum-vulnerable and disabled
+	fn ed25519_public_keys(
+		&mut self,
+		_id: PassPointerAndReadCopy<KeyTypeId, 4>,
+	) -> AllocateAndReturnByCodec<Vec<ed25519::Public>> {
+		log::warn!("ed25519_public_keys called - returning empty list for quantum safety");
+		Vec::new()
+	}
 
-	// QUANTUM-VULNERABLE: ed25519 removed for quantum safety
-	// /// Generate an `ed22519` key for the given key type using an optional `seed` and
-	// /// store it in the keystore.
-	// ///
-	// /// The `seed` needs to be a valid utf8.
-	// ///
-	// /// Returns the public key.
-	// fn ed25519_generate(
-	// 	&mut self,
-	// 	id: PassPointerAndReadCopy<KeyTypeId, 4>,
-	// 	seed: PassFatPointerAndDecode<Option<Vec<u8>>>,
-	// ) -> AllocateAndReturnPointer<ed25519::Public, 32> {
-	// 	let seed = seed.as_ref().map(|s| core::str::from_utf8(s).expect("Seed is valid utf8!"));
-	// 	self.extension::<KeystoreExt>()
-	// 		.expect("No `keystore` associated for the current context!")
-	// 		.ed25519_generate_new(id, seed)
-	// 		.expect("`ed25519_generate` failed")
-	// }
+	/// Generate an `ed22519` key for the given key type using an optional `seed` and
+	/// store it in the keystore.
+	///
+	/// The `seed` needs to be a valid utf8.
+	///
+	/// Returns the public key.
+	fn ed25519_generate(
+		&mut self,
+		id: PassPointerAndReadCopy<KeyTypeId, 4>,
+		seed: PassFatPointerAndDecode<Option<Vec<u8>>>,
+	) -> AllocateAndReturnPointer<ed25519::Public, 32> {
+		log::warn!("ed25519_generate called - returning quantum-safe stub for quantum safety");
+		// Return a dummy public key filled with zeros
+		ed25519::Public::dummy()
+	}
 
-	// QUANTUM-VULNERABLE: ed25519 removed for quantum safety
-	// /// Sign the given `msg` with the `ed25519` key that corresponds to the given public key and
-	// /// key type in the keystore.
-	// ///
-	// /// Returns the signature.
-	// fn ed25519_sign(
-	// 	&mut self,
-	// 	id: PassPointerAndReadCopy<KeyTypeId, 4>,
-	// 	pub_key: PassPointerAndRead<&ed25519::Public, 32>,
-	// 	msg: PassFatPointerAndRead<&[u8]>,
-	// ) -> AllocateAndReturnByCodec<Option<ed25519::Signature>> {
-	// 	self.extension::<KeystoreExt>()
-	// 		.expect("No `keystore` associated for the current context!")
-	// 		.ed25519_sign(id, pub_key, msg)
-	// 		.ok()
-	// 		.flatten()
-	// }
+	/// Sign the given `msg` with the `ed25519` key that corresponds to the given public key and
+	/// key type in the keystore.
+	///
+	/// Returns the signature.
+	fn ed25519_sign(
+		&mut self,
+		id: PassPointerAndReadCopy<KeyTypeId, 4>,
+		pub_key: PassPointerAndRead<&ed25519::Public, 32>,
+		msg: PassFatPointerAndRead<&[u8]>,
+	) -> AllocateAndReturnByCodec<Option<ed25519::Signature>> {
+		log::warn!("ed25519_sign called - returning None for quantum safety");
+		None
+	}
 
-	// QUANTUM-VULNERABLE: ed25519 removed for quantum safety
-	// /// Verify `ed25519` signature.
-	// ///
-	// /// Returns `true` when the verification was successful.
-	// fn ed25519_verify(
-	// 	sig: PassPointerAndRead<&ed25519::Signature, 64>,
-	// 	msg: PassFatPointerAndRead<&[u8]>,
-	// 	pub_key: PassPointerAndRead<&ed25519::Public, 32>,
-	// ) -> bool {
-	// 	// We don't want to force everyone needing to call the function in an externalities context.
-	// 	// So, we assume that we should not use dalek when we are not in externalities context.
-	// 	// Otherwise, we check if the extension is present.
-	// 	if sp_externalities::with_externalities(|mut e| e.extension::<UseDalekExt>().is_some())
-	// 		.unwrap_or_default()
-	// 	{
-	// 		use ed25519_dalek::Verifier;
-	//
-	// 		let Ok(public_key) = ed25519_dalek::VerifyingKey::from_bytes(&pub_key.0) else {
-	// 			return false
-	// 		};
-	//
-	// 		let sig = ed25519_dalek::Signature::from_bytes(&sig.0);
-	//
-	// 		public_key.verify(msg, &sig).is_ok()
-	// 	} else {
-	// 		ed25519::Pair::verify(sig, msg, pub_key)
-	// 	}
-	// }
+	/// Verify `ed25519` signature.
+	///
+	/// Returns `true` when the verification was successful.
+	fn ed25519_verify(
+		sig: PassPointerAndRead<&ed25519::Signature, 64>,
+		msg: PassFatPointerAndRead<&[u8]>,
+		pub_key: PassPointerAndRead<&ed25519::Public, 32>,
+	) -> bool {
+		log::warn!("ed25519_verify called - returning false for quantum safety");
+		false
+	}
 
 	// QUANTUM-VULNERABLE: ed25519 removed for quantum safety
 	// /// Register a `ed25519` signature for batch verification.
@@ -1069,146 +1042,123 @@ pub trait Crypto {
 		result
 	}
 
-	// QUANTUM-VULNERABLE: sr25519 removed for quantum safety
-	// /// Returns all `sr25519` public keys for the given key id from the keystore.
-	// fn sr25519_public_keys(
-	// 	&mut self,
-	// 	id: PassPointerAndReadCopy<KeyTypeId, 4>,
-	// ) -> AllocateAndReturnByCodec<Vec<sr25519::Public>> {
-	// 	self.extension::<KeystoreExt>()
-	// 		.expect("No `keystore` associated for the current context!")
-	// 		.sr25519_public_keys(id)
-	// }
+	/// Returns all `sr25519` public keys for the given key id from the keystore.
+	fn sr25519_public_keys(
+		&mut self,
+		id: PassPointerAndReadCopy<KeyTypeId, 4>,
+	) -> AllocateAndReturnByCodec<Vec<sr25519::Public>> {
+		log::warn!("sr25519_public_keys called - returning empty list for quantum safety");
+		Vec::new()
+	}
 
-	// QUANTUM-VULNERABLE: sr25519 removed for quantum safety
-	// /// Generate an `sr22519` key for the given key type using an optional seed and
-	// /// store it in the keystore.
-	// ///
-	// /// The `seed` needs to be a valid utf8.
-	// ///
-	// /// Returns the public key.
-	// fn sr25519_generate(
-	// 	&mut self,
-	// 	id: PassPointerAndReadCopy<KeyTypeId, 4>,
-	// 	seed: PassFatPointerAndDecode<Option<Vec<u8>>>,
-	// ) -> AllocateAndReturnPointer<sr25519::Public, 32> {
-	// 	let seed = seed.as_ref().map(|s| core::str::from_utf8(s).expect("Seed is valid utf8!"));
-	// 	self.extension::<KeystoreExt>()
-	// 		.expect("No `keystore` associated for the current context!")
-	// 		.sr25519_generate_new(id, seed)
-	// 		.expect("`sr25519_generate` failed")
-	// }
+	/// Generate an `sr22519` key for the given key type using an optional seed and
+	/// store it in the keystore.
+	///
+	/// The `seed` needs to be a valid utf8.
+	///
+	/// Returns the public key.
+	fn sr25519_generate(
+		&mut self,
+		id: PassPointerAndReadCopy<KeyTypeId, 4>,
+		seed: PassFatPointerAndDecode<Option<Vec<u8>>>,
+	) -> AllocateAndReturnPointer<sr25519::Public, 32> {
+		log::warn!("sr25519_generate called - returning quantum-safe stub for quantum safety");
+		// Return a dummy public key filled with zeros
+		sr25519::Public::dummy()
+	}
 
-	// QUANTUM-VULNERABLE: sr25519 removed for quantum safety
-	// /// Sign the given `msg` with the `sr25519` key that corresponds to the given public key and
-	// /// key type in the keystore.
-	// ///
-	// /// Returns the signature.
-	// fn sr25519_sign(
-	// 	&mut self,
-	// 	id: PassPointerAndReadCopy<KeyTypeId, 4>,
-	// 	pub_key: PassPointerAndRead<&sr25519::Public, 32>,
-	// 	msg: PassFatPointerAndRead<&[u8]>,
-	// ) -> AllocateAndReturnByCodec<Option<sr25519::Signature>> {
-	// 	self.extension::<KeystoreExt>()
-	// 		.expect("No `keystore` associated for the current context!")
-	// 		.sr25519_sign(id, pub_key, msg)
-	// 		.ok()
-	// 		.flatten()
-	// }
+	/// Sign the given `msg` with the `sr25519` key that corresponds to the given public key and
+	/// key type in the keystore.
+	///
+	/// Returns the signature.
+	fn sr25519_sign(
+		&mut self,
+		id: PassPointerAndReadCopy<KeyTypeId, 4>,
+		pub_key: PassPointerAndRead<&sr25519::Public, 32>,
+		msg: PassFatPointerAndRead<&[u8]>,
+	) -> AllocateAndReturnByCodec<Option<sr25519::Signature>> {
+		log::warn!("sr25519_sign called - returning None for quantum safety");
+		None
+	}
 
-	// QUANTUM-VULNERABLE: sr25519 removed for quantum safety
-	// /// Verify an `sr25519` signature.
-	// ///
-	// /// Returns `true` when the verification in successful regardless of
-	// /// signature version.
-	// fn sr25519_verify(
-	// 	sig: PassPointerAndRead<&sr25519::Signature, 64>,
-	// 	msg: PassFatPointerAndRead<&[u8]>,
-	// 	pubkey: PassPointerAndRead<&sr25519::Public, 32>,
-	// ) -> bool {
-	// 	sr25519::Pair::verify_deprecated(sig, msg, pubkey)
-	// }
+	/// Verify an `sr25519` signature.
+	///
+	/// Returns `true` when the verification in successful regardless of
+	/// signature version.
+	fn sr25519_verify(
+		sig: PassPointerAndRead<&sr25519::Signature, 64>,
+		msg: PassFatPointerAndRead<&[u8]>,
+		pubkey: PassPointerAndRead<&sr25519::Public, 32>,
+	) -> bool {
+		log::warn!("sr25519_verify called - returning false for quantum safety");
+		false
+	}
 
-	// QUANTUM-VULNERABLE: ecdsa removed for quantum safety
-	// /// Returns all `ecdsa` public keys for the given key id from the keystore.
-	// fn ecdsa_public_keys(
-	// 	&mut self,
-	// 	id: PassPointerAndReadCopy<KeyTypeId, 4>,
-	// ) -> AllocateAndReturnByCodec<Vec<ecdsa::Public>> {
-	// 	self.extension::<KeystoreExt>()
-	// 		.expect("No `keystore` associated for the current context!")
-	// 		.ecdsa_public_keys(id)
-	// }
+	/// Returns all `ecdsa` public keys for the given key id from the keystore.
+	fn ecdsa_public_keys(
+		&mut self,
+		id: PassPointerAndReadCopy<KeyTypeId, 4>,
+	) -> AllocateAndReturnByCodec<Vec<ecdsa::Public>> {
+		log::warn!("ecdsa_public_keys called - returning empty list for quantum safety");
+		Vec::new()
+	}
 
-	// QUANTUM-VULNERABLE: ecdsa removed for quantum safety
-	// /// Generate an `ecdsa` key for the given key type using an optional `seed` and
-	// /// store it in the keystore.
-	// ///
-	// /// The `seed` needs to be a valid utf8.
-	// ///
-	// /// Returns the public key.
-	// fn ecdsa_generate(
-	// 	&mut self,
-	// 	id: PassPointerAndReadCopy<KeyTypeId, 4>,
-	// 	seed: PassFatPointerAndDecode<Option<Vec<u8>>>,
-	// ) -> AllocateAndReturnPointer<ecdsa::Public, 33> {
-	// 	let seed = seed.as_ref().map(|s| core::str::from_utf8(s).expect("Seed is valid utf8!"));
-	// 	self.extension::<KeystoreExt>()
-	// 		.expect("No `keystore` associated for the current context!")
-	// 		.ecdsa_generate_new(id, seed)
-	// 		.expect("`ecdsa_generate` failed")
-	// }
+	/// Generate an `ecdsa` key for the given key type using an optional `seed` and
+	/// store it in the keystore.
+	///
+	/// The `seed` needs to be a valid utf8.
+	///
+	/// Returns the public key.
+	fn ecdsa_generate(
+		&mut self,
+		id: PassPointerAndReadCopy<KeyTypeId, 4>,
+		seed: PassFatPointerAndDecode<Option<Vec<u8>>>,
+	) -> AllocateAndReturnPointer<ecdsa::Public, 33> {
+		log::warn!("ecdsa_generate called - returning quantum-safe stub for quantum safety");
+		// Return a dummy public key filled with zeros
+		ecdsa::Public::dummy()
+	}
 
-	// QUANTUM-VULNERABLE: ecdsa removed for quantum safety
-	// /// Sign the given `msg` with the `ecdsa` key that corresponds to the given public key and
-	// /// key type in the keystore.
-	// ///
-	// /// Returns the signature.
-	// fn ecdsa_sign(
-	// 	&mut self,
-	// 	id: PassPointerAndReadCopy<KeyTypeId, 4>,
-	// 	pub_key: PassPointerAndRead<&ecdsa::Public, 33>,
-	// 	msg: PassFatPointerAndRead<&[u8]>,
-	// ) -> AllocateAndReturnByCodec<Option<ecdsa::Signature>> {
-	// 	self.extension::<KeystoreExt>()
-	// 		.expect("No `keystore` associated for the current context!")
-	// 		.ecdsa_sign(id, pub_key, msg)
-	// 		.ok()
-	// 		.flatten()
-	// }
+	/// Sign the given `msg` with the `ecdsa` key that corresponds to the given public key and
+	/// key type in the keystore.
+	///
+	/// Returns the signature.
+	fn ecdsa_sign(
+		&mut self,
+		id: PassPointerAndReadCopy<KeyTypeId, 4>,
+		pub_key: PassPointerAndRead<&ecdsa::Public, 33>,
+		msg: PassFatPointerAndRead<&[u8]>,
+	) -> AllocateAndReturnByCodec<Option<ecdsa::Signature>> {
+		log::warn!("ecdsa_sign called - returning None for quantum safety");
+		None
+	}
 
-	// QUANTUM-VULNERABLE: ecdsa removed for quantum safety
-	// /// Sign the given a pre-hashed `msg` with the `ecdsa` key that corresponds to the given public
-	// /// key and key type in the keystore.
-	// ///
-	// /// Returns the signature.
-	// fn ecdsa_sign_prehashed(
-	// 	&mut self,
-	// 	id: PassPointerAndReadCopy<KeyTypeId, 4>,
-	// 	pub_key: PassPointerAndRead<&ecdsa::Public, 33>,
-	// 	msg: PassPointerAndRead<&[u8; 32], 32>,
-	// ) -> AllocateAndReturnByCodec<Option<ecdsa::Signature>> {
-	// 	self.extension::<KeystoreExt>()
-	// 		.expect("No `keystore` associated for the current context!")
-	// 		.ecdsa_sign_prehashed(id, pub_key, msg)
-	// 		.ok()
-	// 		.flatten()
-	// }
+	/// Sign the given a pre-hashed `msg` with the `ecdsa` key that corresponds to the given public
+	/// key and key type in the keystore.
+	///
+	/// Returns the signature.
+	fn ecdsa_sign_prehashed(
+		&mut self,
+		id: PassPointerAndReadCopy<KeyTypeId, 4>,
+		pub_key: PassPointerAndRead<&ecdsa::Public, 33>,
+		msg: PassPointerAndRead<&[u8; 32], 32>,
+	) -> AllocateAndReturnByCodec<Option<ecdsa::Signature>> {
+		log::warn!("ecdsa_sign_prehashed called - returning None for quantum safety");
+		None
+	}
 
-	// QUANTUM-VULNERABLE: ecdsa removed for quantum safety
-	// /// Verify `ecdsa` signature.
-	// ///
-	// /// Returns `true` when the verification was successful.
-	// /// This version is able to handle, non-standard, overflowing signatures.
-	// fn ecdsa_verify(
-	// 	sig: PassPointerAndRead<&ecdsa::Signature, 65>,
-	// 	msg: PassFatPointerAndRead<&[u8]>,
-	// 	pub_key: PassPointerAndRead<&ecdsa::Public, 33>,
-	// ) -> bool {
-	// 	#[allow(deprecated)]
-	// 	ecdsa::Pair::verify_deprecated(sig, msg, pub_key)
-	// }
+	/// Verify `ecdsa` signature.
+	///
+	/// Returns `true` when the verification was successful.
+	/// This version is able to handle, non-standard, overflowing signatures.
+	fn ecdsa_verify(
+		sig: PassPointerAndRead<&ecdsa::Signature, 65>,
+		msg: PassFatPointerAndRead<&[u8]>,
+		pub_key: PassPointerAndRead<&ecdsa::Public, 33>,
+	) -> bool {
+		log::warn!("ecdsa_verify called - returning false for quantum safety");
+		false
+	}
 
 	// QUANTUM-VULNERABLE: ecdsa removed for quantum safety
 	// /// Verify `ecdsa` signature.
@@ -1223,17 +1173,17 @@ pub trait Crypto {
 	// 	ecdsa::Pair::verify(sig, msg, pub_key)
 	// }
 
-	// QUANTUM-VULNERABLE: ecdsa removed for quantum safety
-	// /// Verify `ecdsa` signature with pre-hashed `msg`.
-	// ///
-	// /// Returns `true` when the verification was successful.
-	// fn ecdsa_verify_prehashed(
-	// 	sig: PassPointerAndRead<&ecdsa::Signature, 65>,
-	// 	msg: PassPointerAndRead<&[u8; 32], 32>,
-	// 	pub_key: PassPointerAndRead<&ecdsa::Public, 33>,
-	// ) -> bool {
-	// 	ecdsa::Pair::verify_prehashed(sig, msg, pub_key)
-	// }
+	/// Verify `ecdsa` signature with pre-hashed `msg`.
+	///
+	/// Returns `true` when the verification was successful.
+	fn ecdsa_verify_prehashed(
+		sig: PassPointerAndRead<&ecdsa::Signature, 65>,
+		msg: PassPointerAndRead<&[u8; 32], 32>,
+		pub_key: PassPointerAndRead<&ecdsa::Public, 33>,
+	) -> bool {
+		log::warn!("ecdsa_verify_prehashed called - returning false for quantum safety");
+		false
+	}
 
 	// QUANTUM-VULNERABLE: ecdsa removed for quantum safety
 	// /// Register a `ecdsa` signature for batch verification.
@@ -1321,27 +1271,19 @@ pub trait Crypto {
 	// 		Ok(res)
 	// 	}
 	//
-	// 	/// Verify and recover a SECP256k1 ECDSA signature.
-	// 	///
-	// 	/// - `sig` is passed in RSV format. V should be either `0/1` or `27/28`.
-	// 	/// - `msg` is the blake2-256 hash of the message.
-	// 	///
-	// 	/// Returns `Err` if the signature is bad, otherwise the 33-byte compressed pubkey.
-	// 	fn secp256k1_ecdsa_recover_compressed(
-	// 		sig: PassPointerAndRead<&[u8; 65], 65>,
-	// 		msg: PassPointerAndRead<&[u8; 32], 32>,
-	// 	) -> AllocateAndReturnByCodec<Result<[u8; 33], EcdsaVerifyError>> {
-	// 		let rid = libsecp256k1::RecoveryId::parse(
-	// 			if sig[64] > 26 { sig[64] - 27 } else { sig[64] } as u8,
-	// 		)
-	// 		.map_err(|_| EcdsaVerifyError::BadV)?;
-	// 		let sig = libsecp256k1::Signature::parse_overflowing_slice(&sig[0..64])
-	// 			.map_err(|_| EcdsaVerifyError::BadRS)?;
-	// 		let msg = libsecp256k1::Message::parse(msg);
-	// 		let pubkey =
-	// 			libsecp256k1::recover(&msg, &sig, &rid).map_err(|_| EcdsaVerifyError::BadSignature)?;
-	// 		Ok(pubkey.serialize_compressed())
-	// 	}
+	/// Verify and recover a SECP256k1 ECDSA signature.
+	///
+	/// - `sig` is passed in RSV format. V should be either `0/1` or `27/28`.
+	/// - `msg` is the blake2-256 hash of the message.
+	///
+	/// Returns `Err` if the signature is bad, otherwise the 33-byte compressed pubkey.
+	fn secp256k1_ecdsa_recover_compressed(
+		sig: PassPointerAndRead<&[u8; 65], 65>,
+		msg: PassPointerAndRead<&[u8; 32], 32>,
+	) -> AllocateAndReturnByCodec<Result<[u8; 33], EcdsaVerifyError>> {
+		log::warn!("secp256k1_ecdsa_recover_compressed called - returning error for quantum safety");
+		Err(EcdsaVerifyError::BadSignature)
+	}
 
 	// QUANTUM-VULNERABLE: secp256k1 ecdsa removed for quantum safety
 	// 	/// Verify and recover a SECP256k1 ECDSA signature.

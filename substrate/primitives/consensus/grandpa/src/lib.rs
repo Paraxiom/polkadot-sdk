@@ -42,21 +42,10 @@ pub const RUNTIME_LOG_TARGET: &str = "runtime::grandpa";
 /// Key type for GRANDPA module.
 pub const KEY_TYPE: sp_core::crypto::KeyTypeId = sp_application_crypto::key_types::GRANDPA;
 
-mod app {
-	use sp_application_crypto::{app_crypto, ed25519, key_types::GRANDPA};
-	app_crypto!(ed25519, GRANDPA);
-}
-
-sp_application_crypto::with_pair! {
-	/// The grandpa crypto scheme defined via the keypair type.
-	pub type AuthorityPair = app::Pair;
-}
-
-/// Identity of a Grandpa authority.
-pub type AuthorityId = app::Public;
-
-/// Signature for a Grandpa authority.
-pub type AuthoritySignature = app::Signature;
+// Use SPHINCS+ for quantum-safety with application crypto wrappers
+pub type AuthorityPair = sp_core::sphincs::Pair;
+pub type AuthorityId = sp_core::sphincs::Public;
+pub type AuthoritySignature = sp_core::sphincs::Signature;
 
 /// The `ConsensusEngineId` of GRANDPA.
 pub const GRANDPA_ENGINE_ID: ConsensusEngineId = *b"FRNK";
@@ -444,11 +433,9 @@ where
 	H: Encode,
 	N: Encode,
 {
-	use sp_application_crypto::RuntimeAppPublic;
-
 	localized_payload_with_buffer(round, set_id, message, buf);
 
-	let valid = id.verify(&buf, signature);
+	let valid = signature.verify(&buf, &id);
 
 	if !valid {
 		let log_target = if cfg!(feature = "std") { CLIENT_LOG_TARGET } else { RUNTIME_LOG_TARGET };
@@ -472,15 +459,11 @@ where
 	H: Encode,
 	N: Encode,
 {
-	use sp_application_crypto::AppCrypto;
-
 	let encoded = localized_payload(round, set_id, &message);
 	let signature = keystore
-		.ed25519_sign(AuthorityId::ID, public.as_ref(), &encoded[..])
+		.sphincs_sign(KEY_TYPE, &public, &encoded[..])
 		.ok()
-		.flatten()?
-		.try_into()
-		.ok()?;
+		.flatten()?;
 
 	Some(finality_grandpa::SignedMessage { message, signature, id: public })
 }
