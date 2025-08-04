@@ -15911,6 +15911,7 @@ version = "7.0.0"
 dependencies = [
  "bitvec",
  "bounded-collections 0.3.2",
+ "hash256-std-hasher",
  "hex-literal",
  "log",
  "parity-scale-codec",
@@ -15918,6 +15919,7 @@ dependencies = [
  "polkadot-parachain-primitives",
  "scale-info",
  "serde",
+ "sha3",
  "sp-api",
  "sp-application-crypto",
  "sp-arithmetic",

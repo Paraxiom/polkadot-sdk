@@ -41,12 +41,17 @@ use sp_std::convert::TryFrom;
 
 /// SPHINCS+ public key size (64 bytes for SPHINCS+-256)
 pub const PUBLIC_KEY_SERIALIZED_SIZE: usize = 64;
+pub const PUBLIC_KEY_LENGTH: usize = PUBLIC_KEY_SERIALIZED_SIZE;
 
 /// SPHINCS+ signature size (varies by parameter set, using SPHINCS+-256f)
 pub const SIGNATURE_SERIALIZED_SIZE: usize = 49856;
+pub const SIGNATURE_LENGTH: usize = SIGNATURE_SERIALIZED_SIZE;
 
 /// SPHINCS+ secret key size
 pub const SECRET_KEY_SERIALIZED_SIZE: usize = 128;
+
+/// SPHINCS+ key type ID
+pub const SPHINCS_CRYPTO_ID: CryptoTypeId = CryptoTypeId(*b"sphn");
 
 /// Alias for compatibility
 pub const PUBLIC_KEY_SIZE: usize = PUBLIC_KEY_SERIALIZED_SIZE;
@@ -112,6 +117,13 @@ impl crate::crypto::FromEntropy for Public {
 
 impl ByteArray for Public {
 	const LEN: usize = PUBLIC_KEY_SERIALIZED_SIZE;
+}
+
+impl Public {
+	/// Create from raw bytes array
+	pub fn from_raw(data: [u8; PUBLIC_KEY_SERIALIZED_SIZE]) -> Self {
+		Public(data)
+	}
 }
 
 
@@ -219,6 +231,7 @@ impl<'de> Deserialize<'de> for Public {
 
 /// SPHINCS+ signature.
 #[derive(Clone, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
+#[cfg_attr(feature = "std", derive(Hash))]
 pub struct Signature(pub [u8; SIGNATURE_SERIALIZED_SIZE]);
 
 impl TryFrom<&[u8]> for Signature {
@@ -254,6 +267,13 @@ impl AsMut<[u8]> for Signature {
 
 impl ByteArray for Signature {
 	const LEN: usize = SIGNATURE_SERIALIZED_SIZE;
+}
+
+impl Signature {
+	/// Create from raw bytes array
+	pub fn from_raw(data: [u8; SIGNATURE_SERIALIZED_SIZE]) -> Self {
+		Signature(data)
+	}
 }
 
 

@@ -20,6 +20,8 @@ log = { workspace = true }
 scale-info = { features = ["bit-vec", "derive", "serde"], workspace = true }
 serde = { features = ["alloc", "derive"], workspace = true }
 thiserror = { workspace = true, optional = true }
+sha3 = { version = "0.10", default-features = false }
+hash256-std-hasher = { version = "0.15", default-features = false }
 
 sp-api = { workspace = true }
 sp-application-crypto = { features = ["serde"], workspace = true }
@@ -62,6 +64,8 @@ std = [
 	"sp-staking/std",
 	"sp-std/std",
 	"thiserror",
+	"sha3/std",
+	"hash256-std-hasher/std",
 ]
 runtime-benchmarks = [
 	"polkadot-parachain-primitives/runtime-benchmarks",

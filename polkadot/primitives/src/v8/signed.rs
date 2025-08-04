@@ -23,10 +23,10 @@ use sp_application_crypto::AppCrypto;
 #[cfg(feature = "std")]
 use sp_keystore::{Error as KeystoreError, KeystorePtr};
 
-use sp_core::RuntimeDebug;
+use sp_core::{RuntimeDebug, sr25519, ed25519, ecdsa};
 use sp_runtime::traits::AppVerify;
 
-use super::{SigningContext, ValidatorId, ValidatorIndex, ValidatorSignature};
+use super::{SigningContext, ValidatorId, ValidatorIndex, ValidatorSignature, QuantumPublic, QuantumSignature};
 
 /// Signed data with signature already verified.
 ///
@@ -279,14 +279,38 @@ impl<Payload: EncodeAs<RealPayload>, RealPayload: Encode> UncheckedSigned<Payloa
 		key: &ValidatorId,
 	) -> Result<Option<Self>, KeystoreError> {
 		let data = Self::payload_data(&payload, context);
-		let signature =
-			keystore.sr25519_sign(ValidatorId::ID, key.as_ref(), &data)?.map(|sig| Self {
-				payload,
-				validator_index,
-				signature: sig.into(),
-				real_payload: std::marker::PhantomData,
-			});
-		Ok(signature)
+		
+		// Support quantum-safe signing
+		let signature = match key {
+			#[allow(deprecated)]
+			QuantumPublic::Sr25519(public) => {
+				keystore.sr25519_sign(sr25519::CRYPTO_ID, public.as_ref(), &data)?
+					.map(|sig| QuantumSignature::Sr25519(sig))
+			},
+			#[allow(deprecated)]
+			QuantumPublic::Ed25519(public) => {
+				keystore.ed25519_sign(ed25519::CRYPTO_ID, public.as_ref(), &data)?
+					.map(|sig| QuantumSignature::Ed25519(sig))
+			},
+			#[allow(deprecated)]
+			QuantumPublic::Ecdsa(public) => {
+				keystore.ecdsa_sign(ecdsa::CRYPTO_ID, public.as_ref(), &data)?
+					.map(|sig| QuantumSignature::Ecdsa(sig))
+			},
+			QuantumPublic::Sphincs(public) => {
+				// For SPHINCS+, we need to use the generic sign method
+				// This would require keystore support for SPHINCS+
+				// For now, return None as SPHINCS+ keystore support is pending
+				return Ok(None);
+			},
+		};
+		
+		Ok(signature.map(|sig| Self {
+			payload,
+			validator_index,
+			signature: sig,
+			real_payload: std::marker::PhantomData,
+		}))
 	}
 
 	/// Validate the payload given the context and public key

@@ -40,20 +40,73 @@ use sp_core::quantum_signature::{QuantumSignature, QuantumPublic};
 
 // Use SHA3 for quantum safety instead of Blake2
 pub use sp_runtime::traits::{Hash as HashT};
-use sp_core::hashing::sha3_256;
 use sp_core::H256;
+use serde::{Serialize, Deserialize};
 
 /// Quantum-safe hasher using SHA3-256
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Sha3Hasher;
+
+impl sp_core::Hasher for Sha3Hasher {
+    type Out = H256;
+    type StdHasher = hash256_std_hasher::Hash256StdHasher;
+    const LENGTH: usize = 32;
+    
+    fn hash(data: &[u8]) -> Self::Out {
+        use sha3::{Digest, Sha3_256};
+        let mut hasher = Sha3_256::new();
+        hasher.update(data);
+        let result = hasher.finalize();
+        H256::from_slice(&result)
+    }
+}
+
 impl HashT for Sha3Hasher {
     type Output = H256;
     
     fn hash(data: &[u8]) -> Self::Output {
-        H256::from(sha3_256(data))
+        <Self as sp_core::Hasher>::hash(data)
+    }
+    
+    fn ordered_trie_root<I>(input: I, version: sp_runtime::StateVersion) -> Self::Output
+    where
+        I: IntoIterator<Item = Vec<u8>>,
+    {
+        use sp_trie::{trie_types::TrieDBMutBuilderV1, LayoutV1, TrieMut};
+        use sp_trie::HashDBT;
+        
+        let mut db = sp_trie::MemoryDB::<Self>::default();
+        let mut root = Default::default();
+        {
+            let mut trie = TrieDBMutBuilderV1::<Self>::new(&mut db, &mut root).build();
+            for (i, value) in input.into_iter().enumerate() {
+                let key = sp_runtime::codec::Encode::encode(&(i as u32));
+                trie.insert(&key, &value).expect("Failed to insert into trie");
+            }
+        }
+        root
+    }
+    
+    fn trie_root<I>(input: I, version: sp_runtime::StateVersion) -> Self::Output 
+    where
+        I: IntoIterator<Item = (Vec<u8>, Vec<u8>)>,
+    {
+        use sp_trie::{trie_types::TrieDBMutBuilderV1, LayoutV1, TrieMut};
+        use sp_trie::HashDBT;
+        
+        let mut db = sp_trie::MemoryDB::<Self>::default();
+        let mut root = Default::default();
+        {
+            let mut trie = TrieDBMutBuilderV1::<Self>::new(&mut db, &mut root).build();
+            for (key, value) in input {
+                trie.insert(&key, &value).expect("Failed to insert into trie");
+            }
+        }
+        root
     }
 }
 
-// Alias for compatibility
+// Quantum-safe hasher
 pub type QuantumHasher = Sha3Hasher;
 
 // Export some core primitives.
@@ -184,16 +237,15 @@ impl TypeIndex for ValidatorIndex {
 	}
 }
 
-sp_application_crypto::with_pair! {
-	/// A Parachain validator keypair.
-	pub type ValidatorPair = validator_app::Pair;
-}
+/// A Parachain validator keypair (quantum-safe).
+#[cfg(feature = "std")]
+pub type ValidatorPair = sp_core::sphincs::Pair;
 
-/// Signature with which parachain validators sign blocks.
+/// Signature with which parachain validators sign blocks (quantum-safe).
 ///
 /// For now we assert that parachain validator set is exactly equivalent to the authority set, and
 /// so we define it to be the same type as `SessionKey`. In the future it may have different crypto.
-pub type ValidatorSignature = validator_app::Signature;
+pub type ValidatorSignature = QuantumSignature;
 
 /// A declarations of storage keys where an external observer can find some interesting data.
 pub mod well_known_keys {
@@ -704,9 +756,9 @@ pub struct PersistedValidationData<H = Hash, N = BlockNumber> {
 }
 
 impl<H: Encode, N: Encode> PersistedValidationData<H, N> {
-	/// Compute the blake2-256 hash of the persisted validation data.
+	/// Compute the SHA3-256 hash of the persisted validation data.
 	pub fn hash(&self) -> Hash {
-		H256::from(sha3_256(&self.encode()))
+		QuantumHasher::hash(&self.encode())
 	}
 }
 
@@ -730,9 +782,9 @@ pub struct CandidateCommitments<N = BlockNumber> {
 }
 
 impl CandidateCommitments {
-	/// Compute the blake2-256 hash of the commitments.
+	/// Compute the SHA3-256 hash of the commitments.
 	pub fn hash(&self) -> Hash {
-		H256::from(sha3_256(&self.encode()))
+		QuantumHasher::hash(&self.encode())
 	}
 }
 
@@ -1522,7 +1574,8 @@ impl DisputeStatement {
 	) -> Result<(), ()> {
 		let payload = self.payload_data(candidate_hash, session)?;
 
-		if validator_signature.verify(&payload[..], &validator_public) {
+		// Use the QuantumSignature verify method
+		if validator_signature.verify(&payload[..], validator_public) {
 			Ok(())
 		} else {
 			Err(())
