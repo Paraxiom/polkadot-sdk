@@ -21,12 +21,14 @@ use alloc::vec::Vec;
 #[cfg(feature = "std")]
 use sp_application_crypto::AppCrypto;
 #[cfg(feature = "std")]
-use sp_keystore::{Error as KeystoreError, KeystorePtr};
+use sp_keystore::{Error as KeystoreError, KeystorePtr, Keystore};
 
-use sp_core::{RuntimeDebug, sr25519, ed25519, ecdsa};
+use sp_core::{RuntimeDebug, sr25519, ed25519, ecdsa, sphincs};
 use sp_runtime::traits::AppVerify;
+use codec::Decode as _;
+use sp_core::crypto::CryptoTypeId;
 
-use super::{SigningContext, ValidatorId, ValidatorIndex, ValidatorSignature, QuantumPublic, QuantumSignature};
+use super::{SigningContext, ValidatorId, ValidatorIndex, ValidatorSignature, QuantumPublic, QuantumSignature, PARACHAIN_KEY_TYPE_ID};
 
 /// Signed data with signature already verified.
 ///
@@ -280,28 +282,42 @@ impl<Payload: EncodeAs<RealPayload>, RealPayload: Encode> UncheckedSigned<Payloa
 	) -> Result<Option<Self>, KeystoreError> {
 		let data = Self::payload_data(&payload, context);
 		
-		// Support quantum-safe signing
+		// Support quantum-safe signing using the generic sign_with method
 		let signature = match key {
 			#[allow(deprecated)]
 			QuantumPublic::Sr25519(public) => {
-				keystore.sr25519_sign(sr25519::CRYPTO_ID, public.as_ref(), &data)?
-					.map(|sig| QuantumSignature::Sr25519(sig))
+				// Sr25519 is quantum-vulnerable and deprecated, but we maintain backwards compatibility
+				keystore.sign_with(PARACHAIN_KEY_TYPE_ID, sr25519::CRYPTO_ID, public.as_ref(), &data)?
+					.and_then(|sig_bytes| {
+						sr25519::Signature::decode(&mut sig_bytes.as_slice()).ok()
+							.map(|sig| QuantumSignature::Sr25519(sig))
+					})
 			},
 			#[allow(deprecated)]
 			QuantumPublic::Ed25519(public) => {
-				keystore.ed25519_sign(ed25519::CRYPTO_ID, public.as_ref(), &data)?
-					.map(|sig| QuantumSignature::Ed25519(sig))
+				// Ed25519 is quantum-vulnerable and deprecated, but we maintain backwards compatibility
+				keystore.sign_with(PARACHAIN_KEY_TYPE_ID, ed25519::CRYPTO_ID, public.as_ref(), &data)?
+					.and_then(|sig_bytes| {
+						ed25519::Signature::decode(&mut sig_bytes.as_slice()).ok()
+							.map(|sig| QuantumSignature::Ed25519(sig))
+					})
 			},
 			#[allow(deprecated)]
 			QuantumPublic::Ecdsa(public) => {
-				keystore.ecdsa_sign(ecdsa::CRYPTO_ID, public.as_ref(), &data)?
-					.map(|sig| QuantumSignature::Ecdsa(sig))
+				// ECDSA is quantum-vulnerable and deprecated, but we maintain backwards compatibility
+				keystore.sign_with(PARACHAIN_KEY_TYPE_ID, ecdsa::CRYPTO_ID, public.as_ref(), &data)?
+					.and_then(|sig_bytes| {
+						ecdsa::Signature::decode(&mut sig_bytes.as_slice()).ok()
+							.map(|sig| QuantumSignature::Ecdsa(sig))
+					})
 			},
 			QuantumPublic::Sphincs(public) => {
-				// For SPHINCS+, we need to use the generic sign method
-				// This would require keystore support for SPHINCS+
-				// For now, return None as SPHINCS+ keystore support is pending
-				return Ok(None);
+				// SPHINCS+ is quantum-safe
+				keystore.sign_with(PARACHAIN_KEY_TYPE_ID, sphincs::CRYPTO_ID, public.as_ref(), &data)?
+					.and_then(|sig_bytes| {
+						sphincs::Signature::decode(&mut sig_bytes.as_slice()).ok()
+							.map(|sig| QuantumSignature::Sphincs(sig))
+					})
 			},
 		};
 		

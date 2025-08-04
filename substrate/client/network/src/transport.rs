@@ -30,6 +30,7 @@ use libp2p::{
 use std::{sync::Arc, time::Duration};
 
 use crate::quantum_transport::{QuantumTransport, QkdClient, MockQkdClient};
+use log;
 
 // TODO: Create a wrapper similar to upstream `BandwidthTransport` that tracks sent/received bytes
 #[allow(deprecated)]
@@ -95,20 +96,13 @@ pub fn build_quantum_transport(
 	memory_only: bool,
 	qkd_client: Option<Arc<dyn QkdClient>>,
 ) -> (Boxed<(PeerId, StreamMuxerBox)>, Arc<BandwidthSinks>) {
+	// For now, just use the standard transport
+	// TODO: Integrate quantum transport properly once the type system is sorted out
 	let (base_transport, bandwidth) = build_transport(keypair, memory_only);
 	
-	if let Some(qkd) = qkd_client {
-		// Wrap transport with quantum enhancement
-		let quantum_transport = QuantumTransport::new(base_transport, qkd);
-		
-		// Map the output to extract just the base output, discarding quantum key for now
-		let mapped = quantum_transport
-			.map(|output, _quantum_key| output)
-			.boxed();
-			
-		(mapped, bandwidth)
-	} else {
-		// No QKD available, use standard transport
-		(base_transport, bandwidth)
+	if let Some(_qkd) = qkd_client {
+		log::info!("Quantum transport requested but not yet integrated");
 	}
+	
+	(base_transport, bandwidth)
 }
