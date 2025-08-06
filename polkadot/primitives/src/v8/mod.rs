@@ -35,8 +35,68 @@ use sp_arithmetic::{
 use sp_core::RuntimeDebug;
 use sp_inherents::InherentIdentifier;
 use sp_runtime::traits::{AppVerify, Header as HeaderT};
+use sp_application_crypto::{AppCrypto, AppSignature, RuntimeAppPublic};
+use sp_core::quantum_signature::{QuantumSignature, QuantumPublic};
 
-pub use sp_runtime::traits::{BlakeTwo256, Hash as HashT};
+// Use SHA3 for quantum safety instead of Blake2
+pub use sp_runtime::traits::{Hash as HashT};
+use sp_core::H256;
+use serde::{Serialize, Deserialize};
+
+/// Quantum-safe hasher using SHA3-256
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Sha3Hasher;
+
+impl sp_core::Hasher for Sha3Hasher {
+    type Out = H256;
+    type StdHasher = hash256_std_hasher::Hash256StdHasher;
+    const LENGTH: usize = 32;
+    
+    fn hash(data: &[u8]) -> Self::Out {
+        use sha3::{Digest, Sha3_256};
+        let mut hasher = Sha3_256::new();
+        hasher.update(data);
+        let result = hasher.finalize();
+        H256::from_slice(&result)
+    }
+}
+
+impl HashT for Sha3Hasher {
+    type Output = H256;
+    
+    fn hash(data: &[u8]) -> Self::Output {
+        <Self as sp_core::Hasher>::hash(data)
+    }
+    
+    fn ordered_trie_root(input: Vec<Vec<u8>>, version: sp_runtime::StateVersion) -> Self::Output
+    {
+        // For now, use a simple hash of concatenated values
+        // This is a placeholder - real implementation would use proper trie
+        use sha3::{Digest, Sha3_256};
+        let mut hasher = Sha3_256::new();
+        for (i, value) in input.iter().enumerate() {
+            hasher.update(&(i as u32).to_le_bytes());
+            hasher.update(&value);
+        }
+        H256::from_slice(&hasher.finalize())
+    }
+    
+    fn trie_root(input: Vec<(Vec<u8>, Vec<u8>)>, version: sp_runtime::StateVersion) -> Self::Output 
+    {
+        // For now, use a simple hash of key-value pairs
+        // This is a placeholder - real implementation would use proper trie
+        use sha3::{Digest, Sha3_256};
+        let mut hasher = Sha3_256::new();
+        for (key, value) in input {
+            hasher.update(&key);
+            hasher.update(&value);
+        }
+        H256::from_slice(&hasher.finalize())
+    }
+}
+
+// Quantum-safe hasher
+pub type QuantumHasher = Sha3Hasher;
 
 // Export some core primitives.
 pub use polkadot_core_primitives::v2::{
@@ -51,7 +111,6 @@ pub use polkadot_parachain_primitives::primitives::{
 	ValidationCodeHash, LOWEST_PUBLIC_ID,
 };
 
-use serde::{Deserialize, Serialize};
 
 pub use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 pub use sp_consensus_slots::Slot;
@@ -80,34 +139,26 @@ pub use metrics::{
 pub const COLLATOR_KEY_TYPE_ID: KeyTypeId = KeyTypeId(*b"coll");
 const LOG_TARGET: &str = "runtime::primitives";
 
-mod collator_app {
-	use sp_application_crypto::{app_crypto, sr25519};
-	app_crypto!(sr25519, super::COLLATOR_KEY_TYPE_ID);
-}
+// Quantum-safe collator types
+/// Identity that collators use (quantum-safe).
+pub type CollatorId = QuantumPublic;
 
-/// Identity that collators use.
-pub type CollatorId = collator_app::Public;
-
-/// A Parachain collator keypair.
+/// A Parachain collator keypair (quantum-safe).
 #[cfg(feature = "std")]
-pub type CollatorPair = collator_app::Pair;
+pub type CollatorPair = sp_core::sphincs::Pair;
 
-/// Signature on candidate's block data by a collator.
-pub type CollatorSignature = collator_app::Signature;
+/// Signature on candidate's block data by a collator (quantum-safe).
+pub type CollatorSignature = QuantumSignature;
 
 /// The key type ID for a parachain validator key.
 pub const PARACHAIN_KEY_TYPE_ID: KeyTypeId = KeyTypeId(*b"para");
 
-mod validator_app {
-	use sp_application_crypto::{app_crypto, sr25519};
-	app_crypto!(sr25519, super::PARACHAIN_KEY_TYPE_ID);
-}
-
-/// Identity that parachain validators use when signing validation messages.
+// Quantum-safe validator types
+/// Identity that parachain validators use when signing validation messages (quantum-safe).
 ///
 /// For now we assert that parachain validator set is exactly equivalent to the authority set, and
 /// so we define it to be the same type as `SessionKey`. In the future it may have different crypto.
-pub type ValidatorId = validator_app::Public;
+pub type ValidatorId = QuantumPublic;
 
 /// Trait required for type specific indices e.g. `ValidatorIndex` and `GroupIndex`
 pub trait TypeIndex {
@@ -174,16 +225,15 @@ impl TypeIndex for ValidatorIndex {
 	}
 }
 
-sp_application_crypto::with_pair! {
-	/// A Parachain validator keypair.
-	pub type ValidatorPair = validator_app::Pair;
-}
+/// A Parachain validator keypair (quantum-safe).
+#[cfg(feature = "std")]
+pub type ValidatorPair = sp_core::sphincs::Pair;
 
-/// Signature with which parachain validators sign blocks.
+/// Signature with which parachain validators sign blocks (quantum-safe).
 ///
 /// For now we assert that parachain validator set is exactly equivalent to the authority set, and
 /// so we define it to be the same type as `SessionKey`. In the future it may have different crypto.
-pub type ValidatorSignature = validator_app::Signature;
+pub type ValidatorSignature = QuantumSignature;
 
 /// A declarations of storage keys where an external observer can find some interesting data.
 pub mod well_known_keys {
@@ -473,22 +523,15 @@ pub const LEGACY_MIN_BACKING_VOTES: u32 = 2;
 /// Default value for `SchedulerParams.lookahead`
 pub const DEFAULT_SCHEDULING_LOOKAHEAD: u32 = 3;
 
-// The public key of a keypair used by a validator for determining assignments
-/// to approve included parachain candidates.
-mod assignment_app {
-	use sp_application_crypto::{app_crypto, sr25519};
-	app_crypto!(sr25519, super::ASSIGNMENT_KEY_TYPE_ID);
-}
-
+// Quantum-safe assignment types
 /// The public key of a keypair used by a validator for determining assignments
-/// to approve included parachain candidates.
-pub type AssignmentId = assignment_app::Public;
+/// to approve included parachain candidates (quantum-safe).
+pub type AssignmentId = QuantumPublic;
 
-sp_application_crypto::with_pair! {
-	/// The full keypair used by a validator for determining assignments to approve included
-	/// parachain candidates.
-	pub type AssignmentPair = assignment_app::Pair;
-}
+/// The full keypair used by a validator for determining assignments to approve included
+/// parachain candidates (quantum-safe).
+#[cfg(feature = "std")]
+pub type AssignmentPair = sp_core::sphincs::Pair;
 
 /// The index of the candidate in the list of candidates fully included as-of the block.
 pub type CandidateIndex = u32;
@@ -545,7 +588,7 @@ pub struct CandidateDescriptor<H = Hash> {
 	pub para_id: Id,
 	/// The hash of the relay-chain block this is executed in the context of.
 	pub relay_parent: H,
-	/// The collator's sr25519 public key.
+	/// The collator's quantum-safe public key.
 	pub collator: CollatorId,
 	/// The blake2-256 hash of the persisted validation data. This is extra data derived from
 	/// relay-chain state which may vary based on bitfields included before the candidate.
@@ -599,7 +642,7 @@ impl<H> CandidateReceipt<H> {
 	where
 		H: Encode,
 	{
-		CandidateHash(BlakeTwo256::hash_of(self))
+		CandidateHash(QuantumHasher::hash(self.encode().as_slice()))
 	}
 }
 
@@ -701,9 +744,9 @@ pub struct PersistedValidationData<H = Hash, N = BlockNumber> {
 }
 
 impl<H: Encode, N: Encode> PersistedValidationData<H, N> {
-	/// Compute the blake2-256 hash of the persisted validation data.
+	/// Compute the SHA3-256 hash of the persisted validation data.
 	pub fn hash(&self) -> Hash {
-		BlakeTwo256::hash_of(self)
+		QuantumHasher::hash(&self.encode())
 	}
 }
 
@@ -727,9 +770,9 @@ pub struct CandidateCommitments<N = BlockNumber> {
 }
 
 impl CandidateCommitments {
-	/// Compute the blake2-256 hash of the commitments.
+	/// Compute the SHA3-256 hash of the commitments.
 	pub fn hash(&self) -> Hash {
-		BlakeTwo256::hash_of(self)
+		QuantumHasher::hash(&self.encode())
 	}
 }
 
@@ -1519,7 +1562,8 @@ impl DisputeStatement {
 	) -> Result<(), ()> {
 		let payload = self.payload_data(candidate_hash, session)?;
 
-		if validator_signature.verify(&payload[..], &validator_public) {
+		// Use the QuantumSignature verify method
+		if validator_signature.verify(&payload[..], validator_public) {
 			Ok(())
 		} else {
 			Err(())
@@ -2205,7 +2249,7 @@ impl<BlockNumber: Default + From<u32>> Default for SchedulerParams<BlockNumber> 
 pub mod tests {
 	use super::*;
 	use bitvec::bitvec;
-	use sp_core::sr25519;
+	use sp_core::sphincs;
 
 	/// Create a dummy committed candidate receipt
 	pub fn dummy_committed_candidate_receipt() -> CommittedCandidateReceipt {
@@ -2215,11 +2259,11 @@ pub mod tests {
 			descriptor: CandidateDescriptor {
 				para_id: 0.into(),
 				relay_parent: zeros,
-				collator: CollatorId::from(sr25519::Public::default()),
+				collator: QuantumPublic::default(),
 				persisted_validation_data_hash: zeros,
 				pov_hash: zeros,
 				erasure_root: zeros,
-				signature: CollatorSignature::from(sr25519::Signature::default()),
+				signature: QuantumSignature::default(),
 				para_head: zeros,
 				validation_code_hash: ValidationCode(vec![1, 2, 3, 4, 5, 6, 7, 8, 9]).hash(),
 			},

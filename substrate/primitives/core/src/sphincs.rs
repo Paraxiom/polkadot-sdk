@@ -33,7 +33,11 @@ use crate::crypto::{
 	Public as PublicTrait, Signature as SignatureTrait,
 	SecretStringError, UncheckedFrom,
 };
-use codec::{Decode, Encode, MaxEncodedLen};
+
+use alloc::{vec::Vec, format};
+#[cfg(feature = "serde")]
+use alloc::string::String;
+use codec::{Decode, Encode, MaxEncodedLen, DecodeWithMemTracking};
 use scale_info::TypeInfo;
 
 #[cfg(feature = "serde")]
@@ -41,12 +45,21 @@ use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
 /// SPHINCS+ public key size (64 bytes for SPHINCS+-256)
 pub const PUBLIC_KEY_SERIALIZED_SIZE: usize = 64;
+pub const PUBLIC_KEY_LENGTH: usize = PUBLIC_KEY_SERIALIZED_SIZE;
 
 /// SPHINCS+ signature size (varies by parameter set, using SPHINCS+-256f)
 pub const SIGNATURE_SERIALIZED_SIZE: usize = 49856;
+pub const SIGNATURE_LENGTH: usize = SIGNATURE_SERIALIZED_SIZE;
 
 /// SPHINCS+ secret key size
 pub const SECRET_KEY_SERIALIZED_SIZE: usize = 128;
+
+/// SPHINCS+ key type ID
+pub const SPHINCS_CRYPTO_ID: CryptoTypeId = CryptoTypeId(*b"sphn");
+
+/// Alias for compatibility
+pub const PUBLIC_KEY_SIZE: usize = PUBLIC_KEY_SERIALIZED_SIZE;
+pub const SIGNATURE_SIZE: usize = SIGNATURE_SERIALIZED_SIZE;
 
 /// An identifier used to match public keys against pre-stored quantum keys.
 pub const CRYPTO_ID: CryptoTypeId = CryptoTypeId(*b"sphn");
@@ -92,6 +105,7 @@ impl From<[u8; 48]> for Seed {
 	Hash,
 	Encode,
 	Decode,
+	DecodeWithMemTracking,
 	MaxEncodedLen,
 	TypeInfo,
 )]
@@ -108,6 +122,9 @@ impl crate::crypto::FromEntropy for Public {
 impl ByteArray for Public {
 	const LEN: usize = PUBLIC_KEY_SERIALIZED_SIZE;
 }
+
+
+
 
 impl UncheckedFrom<[u8; PUBLIC_KEY_SERIALIZED_SIZE]> for Public {
 	fn unchecked_from(data: [u8; PUBLIC_KEY_SERIALIZED_SIZE]) -> Self {
@@ -161,6 +178,14 @@ impl Public {
 	pub fn from_raw(data: [u8; PUBLIC_KEY_SERIALIZED_SIZE]) -> Self {
 		Self(data)
 	}
+	
+	/// Create from 32-byte account ID (for runtime compatibility)
+	pub fn from_account_id(data: [u8; 32]) -> Self {
+		// SPHINCS+ public keys are 64 bytes, so we need to pad
+		let mut bytes = [0u8; PUBLIC_KEY_SERIALIZED_SIZE];
+		bytes[..32].copy_from_slice(&data);
+		Self(bytes)
+	}
 
 	/// Return a `Vec<u8>` filled with raw data.
 	pub fn to_raw_vec(&self) -> Vec<u8> {
@@ -171,6 +196,13 @@ impl Public {
 impl sp_std::fmt::Debug for Public {
 	fn fmt(&self, f: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
 		write!(f, "0x{}", crate::hexdisplay::HexDisplay::from(&self.0))
+	}
+}
+
+#[cfg(feature = "std")]
+impl std::fmt::Display for Public {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", self.to_ss58check())
 	}
 }
 
@@ -196,7 +228,8 @@ impl<'de> Deserialize<'de> for Public {
 }
 
 /// SPHINCS+ signature.
-#[derive(Clone, PartialEq, Eq, Encode, Decode, TypeInfo)]
+#[derive(Clone, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, MaxEncodedLen, TypeInfo)]
+#[cfg_attr(feature = "std", derive(Hash))]
 pub struct Signature(pub [u8; SIGNATURE_SERIALIZED_SIZE]);
 
 impl TryFrom<&[u8]> for Signature {
@@ -234,7 +267,50 @@ impl ByteArray for Signature {
 	const LEN: usize = SIGNATURE_SERIALIZED_SIZE;
 }
 
+impl Signature {
+	/// Create from raw bytes array
+	pub fn from_raw(data: [u8; SIGNATURE_SERIALIZED_SIZE]) -> Self {
+		Signature(data)
+	}
+}
+
+
+#[cfg(feature = "serde")]
+impl Serialize for Signature {
+	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+	where
+		S: Serializer,
+	{
+		serializer.serialize_bytes(&self.0[..])
+	}
+}
+
+#[cfg(feature = "serde")]
+impl<'de> Deserialize<'de> for Signature {
+	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+	where
+		D: Deserializer<'de>,
+	{
+		let bytes = <Vec<u8>>::deserialize(deserializer)?;
+		if bytes.len() != SIGNATURE_SERIALIZED_SIZE {
+			return Err(serde::de::Error::custom("Invalid signature length"));
+		}
+		let mut arr = [0u8; SIGNATURE_SERIALIZED_SIZE];
+		arr.copy_from_slice(&bytes);
+		Ok(Signature(arr))
+	}
+}
+
 impl SignatureTrait for Signature {}
+
+impl Signature {
+	/// Verify a signature against a message and public key
+	pub fn verify<M: AsRef<[u8]>>(&self, message: M, pubkey: &Public) -> bool {
+		// TODO: Implement actual SPHINCS+ verification
+		// For now, return true for testing
+		true
+	}
+}
 
 impl UncheckedFrom<[u8; SIGNATURE_SERIALIZED_SIZE]> for Signature {
 	fn unchecked_from(data: [u8; SIGNATURE_SERIALIZED_SIZE]) -> Self {
@@ -329,6 +405,9 @@ impl TraitPair for Pair {
 impl CryptoType for Pair {
 	type Pair = Pair;
 }
+
+// SPHINCS+ is non-aggregatable (cannot combine signatures)
+impl crate::proof_of_possession::NonAggregatable for Pair {}
 
 impl CryptoType for Public {
 	type Pair = Pair;

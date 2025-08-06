@@ -45,16 +45,10 @@ pub use scale_info;
 #[cfg(feature = "serde")]
 pub use serde;
 
-#[cfg(feature = "bandersnatch-experimental")]
-pub mod bandersnatch;
-#[cfg(feature = "bls-experimental")]
-pub mod bls381;
-pub mod ecdsa;
-#[cfg(feature = "bls-experimental")]
-pub mod ecdsa_bls381;
-pub mod ed25519;
-pub mod sr25519;
+// Classical crypto modules removed for quantum-safety
+// Only quantum-safe cryptography is supported
 pub mod sphincs;
+pub mod sphincs_simple;
 mod traits;
 
 pub use traits::*;
@@ -64,10 +58,10 @@ pub use traits::*;
 /// types whose identifier is `$key_type`.
 ///
 /// ```rust
-/// # use sp_application_crypto::{app_crypto, ed25519, KeyTypeId};
-/// // Declare a new set of crypto types using ed25519 logic that identifies as `KeyTypeId`
+/// # use sp_application_crypto::{app_crypto, sphincs, KeyTypeId};
+/// // Declare a new set of crypto types using sphincs logic that identifies as `KeyTypeId`
 /// // of value `b"fuba"`.
-/// app_crypto!(ed25519, KeyTypeId(*b"fuba"));
+/// app_crypto!(sphincs, KeyTypeId(*b"fuba"));
 /// ```
 #[cfg(feature = "full_crypto")]
 #[macro_export]
@@ -95,10 +89,10 @@ macro_rules! app_crypto {
 /// types whose identifier is `$key_type`.
 ///
 /// ```rust
-/// # use sp_application_crypto::{app_crypto, ed25519, KeyTypeId};
-/// // Declare a new set of crypto types using ed25519 logic that identifies as `KeyTypeId`
+/// # use sp_application_crypto::{app_crypto, sphincs, KeyTypeId};
+/// // Declare a new set of crypto types using sphincs logic that identifies as `KeyTypeId`
 /// // of value `b"fuba"`.
-/// app_crypto!(ed25519, KeyTypeId(*b"fuba"));
+/// app_crypto!(sphincs, KeyTypeId(*b"fuba"));
 /// ```
 #[cfg(not(feature = "full_crypto"))]
 #[macro_export]

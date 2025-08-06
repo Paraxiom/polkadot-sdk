@@ -235,8 +235,12 @@ impl QkdClient for HybridQkdClient {
 		
 		Box::pin(async move {
 			// First try direct Toshiba QKD if available
-			let toshiba_client = toshiba_clients.lock().unwrap().get(&peer_id).cloned();
-			if let Some(toshiba) = toshiba_client {
+			let toshiba_result = {
+				let clients = toshiba_clients.lock().unwrap();
+				clients.get(&peer_id).cloned()
+			};
+			
+			if let Some(toshiba) = toshiba_result {
 				match toshiba.get_quantum_key(&peer_id.to_string()).await {
 					Ok(key) => {
 						debug!("Got quantum key from Toshiba QKD for peer: {}", peer_id);

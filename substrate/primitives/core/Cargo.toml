@@ -48,29 +48,24 @@ sp-storage = { workspace = true }
 ss58-registry = { workspace = true }
 substrate-bip39 = { workspace = true }
 thiserror = { optional = true, workspace = true }
-# pqcrypto-sphincsplus = { version = "0.7.1", default-features = false } # QuantumHarmony uses Falcon-512 instead
+pqcrypto-sphincsplus = { version = "0.7.1", default-features = false, optional = true }
 tracing = { optional = true, workspace = true, default-features = true }
 zeroize = { workspace = true }
 
 # full crypto
 array-bytes = { workspace = true, default-features = true }
 blake2 = { optional = true, workspace = true }
-ed25519-zebra = { workspace = true }
-libsecp256k1 = { features = ["static-context"], workspace = true }
+# ed25519-zebra = { workspace = true } # Removed for quantum-safety
+# libsecp256k1 = { features = ["static-context"], workspace = true } # Removed for quantum-safety
 merlin = { workspace = true }
-schnorrkel = { features = ["preaudit_deprecated"], workspace = true }
+# schnorrkel = { features = ["preaudit_deprecated"], workspace = true } # Removed for quantum-safety (sr25519)
 sp-crypto-hashing = { workspace = true }
 # k256 crate, better portability, intended to be used in substrate-runtimes (no-std)
-k256 = { features = ["alloc", "ecdsa"], workspace = true }
+# k256 = { features = ["alloc", "ecdsa"], workspace = true } # Removed for quantum-safety
 # secp256k1 crate, better performance, intended to be used on host side (std)
-secp256k1 = { features = ["alloc", "recovery"], optional = true, workspace = true }
+# secp256k1 = { features = ["alloc", "recovery"], optional = true, workspace = true } # Removed for quantum-safety
 
-# bls crypto
-sha2 = { optional = true, workspace = true }
-w3f-bls = { optional = true, workspace = true }
-
-# bandersnatch crypto
-ark-vrf = { optional = true, workspace = true, features = ["bandersnatch", "ring"] }
+# BLS and bandersnatch crypto removed for quantum-safety
 
 [target.'cfg(not(substrate_runtime))'.dependencies]
 sp-externalities = { workspace = true, default-features = false }
@@ -85,14 +80,14 @@ serde_json = { workspace = true, default-features = true }
 [features]
 default = ["std"]
 std = [
-	"ark-vrf?/std",
+	# "ark-vrf?/std", # Removed for quantum-safety
 	"bip39/rand",
 	"bip39/std",
 	"blake2/std",
 	"bounded-collections/std",
 	"bs58/std",
 	"codec/std",
-	"ed25519-zebra/std",
+	# "ed25519-zebra/std", # Removed for quantum-safety
 	"full_crypto",
 	"futures/std",
 	"futures/thread-pool",
@@ -100,8 +95,8 @@ std = [
 	"hash256-std-hasher/std",
 	"impl-serde/std",
 	"itertools",
-	"k256/std",
-	"libsecp256k1/std",
+	# "k256/std", # Removed for quantum-safety
+	# "libsecp256k1/std", # Removed for quantum-safety
 	"log/std",
 	"merlin/std",
 	"parking_lot",
@@ -111,11 +106,11 @@ std = [
 	"primitive-types/std",
 	"rand",
 	"scale-info/std",
-	"schnorrkel/std",
-	"secp256k1/global-context",
-	"secp256k1/std",
+	# "schnorrkel/std", # Removed for quantum-safety
+	# "secp256k1/global-context", # Removed for quantum-safety
+	# "secp256k1/std", # Removed for quantum-safety
 	"serde/std",
-	"sha2?/std",
+	# "sha2?/std", # Removed for quantum-safety (BLS dependency)
 	"sp-crypto-hashing/std",
 	"sp-debug-derive/std",
 	"sp-externalities/std",
@@ -125,7 +120,7 @@ std = [
 	"substrate-bip39/std",
 	"thiserror",
 	"tracing",
-	"w3f-bls?/std",
+	# "w3f-bls?/std", # Removed for quantum-safety
 	"zeroize/alloc",
 	"zeroize/std",
 ]
@@ -137,7 +132,7 @@ serde = [
 	"bs58/alloc",
 	"dep:serde",
 	"impl-serde",
-	"k256/serde",
+	# "k256/serde", # Removed for quantum-safety
 	"primitive-types/serde_no_std",
 	"scale-info/serde",
 	"sp-storage/serde",
@@ -150,12 +145,5 @@ full_crypto = [
 	"blake2",
 ]
 
-# This feature adds BLS crypto primitives.
-# It should not be used in production since the implementation and interface may still
-# be subject to significant changes.
-bls-experimental = ["sha2", "w3f-bls"]
-
-# This feature adds Bandersnatch crypto primitives.
-# It should not be used in production since the implementation and interface may still
-# be subject to significant changes.
-bandersnatch-experimental = ["ark-vrf"]
+# BLS and Bandersnatch features removed for quantum-safety
+# Only quantum-safe cryptography is supported

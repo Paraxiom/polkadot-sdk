@@ -17,7 +17,8 @@
 
 //! Cryptographic utilities.
 
-use crate::{ed25519, sr25519, U256};
+// use crate::{ed25519, sr25519, U256}; // Removed for quantum-safety
+use crate::U256;
 use alloc::{format, str, vec::Vec};
 #[cfg(feature = "serde")]
 use alloc::{string::String, vec};
@@ -587,17 +588,17 @@ impl From<AccountId32> for [u8; 32] {
 	}
 }
 
-impl From<sr25519::Public> for AccountId32 {
-	fn from(k: sr25519::Public) -> Self {
-		k.0.into()
-	}
-}
+// impl From<sr25519::Public> for AccountId32 {
+// 	fn from(k: sr25519::Public) -> Self {
+// 		k.0.into()
+// 	}
+// } // Removed for quantum-safety
 
-impl From<ed25519::Public> for AccountId32 {
-	fn from(k: ed25519::Public) -> Self {
-		k.0.into()
-	}
-}
+// impl From<ed25519::Public> for AccountId32 {
+// 	fn from(k: ed25519::Public) -> Self {
+// 		k.0.into()
+// 	}
+// } // Removed for quantum-safety
 
 #[cfg(feature = "std")]
 impl std::fmt::Display for AccountId32 {

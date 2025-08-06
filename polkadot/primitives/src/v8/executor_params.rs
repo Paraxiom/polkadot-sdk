@@ -21,7 +21,8 @@
 //! by the first element of the vector). Decoding to a usable semantics structure is
 //! done in `polkadot-node-core-pvf`.
 
-use crate::{BlakeTwo256, HashT as _, PvfExecKind, PvfPrepKind};
+use crate::{QuantumHasher, PvfExecKind, PvfPrepKind};
+use sp_runtime::traits::Hash as HashT;
 use alloc::{collections::btree_map::BTreeMap, vec, vec::Vec};
 use codec::{Decode, DecodeWithMemTracking, Encode};
 use core::{ops::Deref, time::Duration};
@@ -223,7 +224,7 @@ impl ExecutorParams {
 
 	/// Returns hash of the set of execution environment parameters
 	pub fn hash(&self) -> ExecutorParamsHash {
-		ExecutorParamsHash(BlakeTwo256::hash(&self.encode()))
+		ExecutorParamsHash(QuantumHasher::hash(&self.encode()))
 	}
 
 	/// Returns hash of preparation-related executor parameters
@@ -245,7 +246,7 @@ impl ExecutorParams {
 			})
 			.for_each(|p| enc.extend(p.encode()));
 
-		ExecutorParamsPrepHash(BlakeTwo256::hash(&enc))
+		ExecutorParamsPrepHash(QuantumHasher::hash(&enc))
 	}
 
 	/// Returns a PVF preparation timeout, if any

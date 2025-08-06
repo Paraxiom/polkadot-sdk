@@ -24,7 +24,8 @@ use super::{
 
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use sp_core::sr25519::vrf::VrfSignature;
+// use sp_core::sr25519::vrf::VrfSignature; // Disabled for quantum migration
+type VrfSignature = [u8; 64]; // Temporary placeholder
 use sp_runtime::{DigestItem, RuntimeDebug};
 
 use codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};

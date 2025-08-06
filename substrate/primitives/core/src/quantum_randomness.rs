@@ -20,9 +20,13 @@
 //! This module provides traits and types for integrating quantum random number
 //! generators (QRNGs) and quantum key distribution (QKD) systems with Substrate.
 
-use alloc::{vec::Vec, vec};
+#[cfg(not(feature = "std"))]
+use alloc::{vec, vec::Vec};
+#[cfg(feature = "std")]
+use std::vec::Vec;
 use codec::{Decode, Encode};
 use scale_info::TypeInfo;
+use sp_std::marker::PhantomData;
 
 /// Trait for quantum randomness sources.
 pub trait QuantumRandomness {

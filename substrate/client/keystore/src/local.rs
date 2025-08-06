@@ -22,7 +22,8 @@ use parking_lot::RwLock;
 use sp_application_crypto::{AppCrypto, AppPair, IsWrappedBy};
 use sp_core::{
 	crypto::{ByteArray, ExposeSecret, KeyTypeId, Pair as CorePair, SecretString, VrfSecret},
-	ecdsa, ed25519, sr25519, sphincs,
+	// Classical crypto removed - using only post-quantum algorithms
+	sphincs,
 };
 use sp_keystore::{Error as TraitError, Keystore, KeystorePtr};
 use std::{
@@ -185,109 +186,12 @@ impl Keystore for LocalKeystore {
 			.all(|(p, t)| self.0.read().key_phrase_by_type(p, *t).ok().flatten().is_some())
 	}
 
-	fn sr25519_public_keys(&self, key_type: KeyTypeId) -> Vec<sr25519::Public> {
-		self.public_keys::<sr25519::Pair>(key_type)
-	}
+	// SR25519 removed - not post-quantum safe
+	// Use SPHINCS+, Falcon, or Lamport signatures instead
 
-	/// Generate a new pair compatible with the 'ed25519' signature scheme.
-	///
-	/// If `[seed]` is `Some` then the key will be ephemeral and stored in memory.
-	fn sr25519_generate_new(
-		&self,
-		key_type: KeyTypeId,
-		seed: Option<&str>,
-	) -> std::result::Result<sr25519::Public, TraitError> {
-		self.generate_new::<sr25519::Pair>(key_type, seed)
-	}
+	// ED25519 removed - not post-quantum safe
 
-	fn sr25519_sign(
-		&self,
-		key_type: KeyTypeId,
-		public: &sr25519::Public,
-		msg: &[u8],
-	) -> std::result::Result<Option<sr25519::Signature>, TraitError> {
-		self.sign::<sr25519::Pair>(key_type, public, msg)
-	}
-
-	fn sr25519_vrf_sign(
-		&self,
-		key_type: KeyTypeId,
-		public: &sr25519::Public,
-		data: &sr25519::vrf::VrfSignData,
-	) -> std::result::Result<Option<sr25519::vrf::VrfSignature>, TraitError> {
-		self.vrf_sign::<sr25519::Pair>(key_type, public, data)
-	}
-
-	fn sr25519_vrf_pre_output(
-		&self,
-		key_type: KeyTypeId,
-		public: &sr25519::Public,
-		input: &sr25519::vrf::VrfInput,
-	) -> std::result::Result<Option<sr25519::vrf::VrfPreOutput>, TraitError> {
-		self.vrf_pre_output::<sr25519::Pair>(key_type, public, input)
-	}
-
-	fn ed25519_public_keys(&self, key_type: KeyTypeId) -> Vec<ed25519::Public> {
-		self.public_keys::<ed25519::Pair>(key_type)
-	}
-
-	/// Generate a new pair compatible with the 'sr25519' signature scheme.
-	///
-	/// If `[seed]` is `Some` then the key will be ephemeral and stored in memory.
-	fn ed25519_generate_new(
-		&self,
-		key_type: KeyTypeId,
-		seed: Option<&str>,
-	) -> std::result::Result<ed25519::Public, TraitError> {
-		self.generate_new::<ed25519::Pair>(key_type, seed)
-	}
-
-	fn ed25519_sign(
-		&self,
-		key_type: KeyTypeId,
-		public: &ed25519::Public,
-		msg: &[u8],
-	) -> std::result::Result<Option<ed25519::Signature>, TraitError> {
-		self.sign::<ed25519::Pair>(key_type, public, msg)
-	}
-
-	fn ecdsa_public_keys(&self, key_type: KeyTypeId) -> Vec<ecdsa::Public> {
-		self.public_keys::<ecdsa::Pair>(key_type)
-	}
-
-	/// Generate a new pair compatible with the 'ecdsa' signature scheme.
-	///
-	/// If `[seed]` is `Some` then the key will be ephemeral and stored in memory.
-	fn ecdsa_generate_new(
-		&self,
-		key_type: KeyTypeId,
-		seed: Option<&str>,
-	) -> std::result::Result<ecdsa::Public, TraitError> {
-		self.generate_new::<ecdsa::Pair>(key_type, seed)
-	}
-
-	fn ecdsa_sign(
-		&self,
-		key_type: KeyTypeId,
-		public: &ecdsa::Public,
-		msg: &[u8],
-	) -> std::result::Result<Option<ecdsa::Signature>, TraitError> {
-		self.sign::<ecdsa::Pair>(key_type, public, msg)
-	}
-
-	fn ecdsa_sign_prehashed(
-		&self,
-		key_type: KeyTypeId,
-		public: &ecdsa::Public,
-		msg: &[u8; 32],
-	) -> std::result::Result<Option<ecdsa::Signature>, TraitError> {
-		let sig = self
-			.0
-			.read()
-			.key_pair_by_type::<ecdsa::Pair>(public, key_type)?
-			.map(|pair| pair.sign_prehashed(msg));
-		Ok(sig)
-	}
+	// ECDSA removed - not post-quantum safe
 
 	sp_keystore::bandersnatch_experimental_enabled! {
 		fn bandersnatch_public_keys(&self, key_type: KeyTypeId) -> Vec<bandersnatch::Public> {

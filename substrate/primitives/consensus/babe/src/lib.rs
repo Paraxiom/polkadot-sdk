@@ -16,6 +16,10 @@
 // limitations under the License.
 
 //! Primitives for BABE.
+//! 
+//! NOTE: BABE consensus is being replaced by Proof of Coherence (PoC) consensus
+//! which uses quantum hardware measurements instead of VRF. This module is
+//! maintained temporarily for compatibility during the migration.
 #![deny(warnings)]
 #![forbid(unsafe_code, missing_docs, unused_variables, unused_imports)]
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -35,16 +39,56 @@ use sp_runtime::{traits::Header, ConsensusEngineId, RuntimeDebug};
 
 use crate::digests::{NextConfigDescriptor, NextEpochDescriptor};
 
-pub use sp_core::sr25519::vrf::{
-	VrfInput, VrfPreOutput, VrfProof, VrfSignData, VrfSignature, VrfTranscript,
-};
+// VRF temporarily disabled for quantum migration - placeholder types
+/// VRF input placeholder type
+pub type VrfInput = [u8; 32];
+/// VRF pre-output placeholder type
+pub type VrfPreOutput = [u8; 32];
+/// VRF proof placeholder type
+pub type VrfProof = [u8; 64];
+/// VRF sign data placeholder type
+pub type VrfSignData = ([u8; 32], [u8; 32], [u8; 64]);
+/// VRF signature placeholder type
+pub type VrfSignature = [u8; 96];
+/// VRF transcript placeholder type
+pub type VrfTranscript = Vec<u8>;
 
 /// Key type for BABE module.
 pub const KEY_TYPE: sp_core::crypto::KeyTypeId = sp_application_crypto::key_types::BABE;
 
-mod app {
-	use sp_application_crypto::{app_crypto, key_types::BABE, sr25519};
-	app_crypto!(sr25519, BABE);
+// BABE is being replaced by Proof of Coherence
+// These are stub types to maintain compilation during migration
+
+/// Stub public key type for BABE migration
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Encode, Decode, TypeInfo)]
+pub struct BabePublicStub([u8; 32]);
+
+/// Stub signature type for BABE migration  
+#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, TypeInfo)]
+pub struct BabeSignatureStub([u8; 64]);
+
+/// A BABE authority keypair - stub for migration
+#[cfg(feature = "std")]
+pub struct AuthorityPair;
+
+/// A BABE authority signature - stub for migration
+pub type AuthoritySignature = BabeSignatureStub;
+
+/// A BABE authority identifier - stub for migration
+pub type AuthorityId = BabePublicStub;
+
+// Implement minimal RuntimeAppPublic for AuthorityId
+impl sp_application_crypto::RuntimeAppPublic for BabePublicStub {
+	const ID: sp_application_crypto::KeyTypeId = KEY_TYPE;
+	type Signature = BabeSignatureStub;
+	
+	fn all() -> Vec<Self> { Vec::new() }
+	fn generate_pair(_: Option<Vec<u8>>) -> Self { BabePublicStub([0u8; 32]) }
+	fn sign<M: AsRef<[u8]>>(&self, _: &M) -> Option<Self::Signature> { None }
+	fn verify<M: AsRef<[u8]>>(&self, _: &M, _: &Self::Signature) -> bool { false }
+	fn to_raw_vec(&self) -> Vec<u8> { self.0.to_vec() }
+	fn generate_proof_of_possession(&mut self) -> Option<Self::Signature> { None }
+	fn verify_proof_of_possession(&self, _: &Self::Signature) -> bool { false }
 }
 
 /// VRF context used for per-slot randomness generation.
@@ -56,17 +100,6 @@ pub const RANDOMNESS_LENGTH: usize = 32;
 /// Randomness type required by BABE operations.
 pub type Randomness = [u8; RANDOMNESS_LENGTH];
 
-/// A Babe authority keypair. Necessarily equivalent to the schnorrkel public key used in
-/// the main Babe module. If that ever changes, then this must, too.
-#[cfg(feature = "std")]
-pub type AuthorityPair = app::Pair;
-
-/// A Babe authority signature.
-pub type AuthoritySignature = app::Signature;
-
-/// A Babe authority identifier. Necessarily equivalent to the schnorrkel public key used in
-/// the main Babe module. If that ever changes, then this must, too.
-pub type AuthorityId = app::Public;
 
 /// The `ConsensusEngineId` of BABE.
 pub const BABE_ENGINE_ID: ConsensusEngineId = *b"BABE";
@@ -100,20 +133,25 @@ pub type BabeAuthorityWeight = u64;
 pub type BabeBlockWeight = u32;
 
 /// Make VRF input suitable for BABE's randomness generation.
+/// Note: BABE is being replaced by Proof of Coherence consensus
+/// This is a temporary stub for compatibility
 pub fn make_vrf_transcript(randomness: &Randomness, slot: Slot, epoch: u64) -> VrfInput {
-	VrfInput::new(
-		&BABE_ENGINE_ID,
-		&[
-			(b"slot number", &slot.to_le_bytes()),
-			(b"current epoch", &epoch.to_le_bytes()),
-			(b"chain randomness", randomness),
-		],
-	)
+	// Temporary stub - Proof of Coherence will use quantum measurements instead
+	// Combine inputs without using quantum-vulnerable hashing
+	let mut result = [0u8; 32];
+	result[0..4].copy_from_slice(&BABE_ENGINE_ID);
+	result[4..12].copy_from_slice(&slot.to_le_bytes());
+	result[12..20].copy_from_slice(&epoch.to_le_bytes());
+	result[20..32].copy_from_slice(&randomness[..12]);
+	result
 }
 
 /// Make VRF signing data suitable for BABE's protocol.
 pub fn make_vrf_sign_data(randomness: &Randomness, slot: Slot, epoch: u64) -> VrfSignData {
-	make_vrf_transcript(randomness, slot, epoch).into()
+	let transcript = make_vrf_transcript(randomness, slot, epoch);
+	// For post-quantum BABE, we create signing data without VRF
+	// This is a placeholder - real implementation would use quantum-safe alternative
+	(transcript, [0u8; 32], [0u8; 64])
 }
 
 /// An consensus log item for BABE.

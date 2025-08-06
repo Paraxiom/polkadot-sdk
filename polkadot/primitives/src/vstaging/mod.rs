@@ -20,8 +20,8 @@ use crate::{slashing::DisputesTimeSlot, ValidatorId, ValidatorIndex, ValidityAtt
 // Put any primitives used by staging APIs functions here
 use super::{
 	async_backing::{InboundHrmpLimitations, OutboundHrmpChannelLimitations},
-	BlakeTwo256, BlockNumber, CandidateCommitments, CandidateDescriptor, CandidateHash, CollatorId,
-	CollatorSignature, CoreIndex, GroupIndex, Hash, HashT, HeadData, Header, Id, Id as ParaId,
+	BlockNumber, CandidateCommitments, CandidateDescriptor, CandidateHash, CollatorId,
+	CollatorSignature, CoreIndex, GroupIndex, Hash, HeadData, Header, Id, Id as ParaId, QuantumHasher,
 	MultiDisputeStatementSet, ScheduledCore, UncheckedSignedAvailabilityBitfields,
 	UpgradeRestriction, ValidationCodeHash,
 };
@@ -144,7 +144,12 @@ impl<H: Copy> From<CandidateDescriptor<H>> for CandidateDescriptorV2<H> {
 			persisted_validation_data_hash: value.persisted_validation_data_hash,
 			pov_hash: value.pov_hash,
 			erasure_root: value.erasure_root,
-			reserved2: value.signature.into_inner().0,
+			reserved2: {
+				let sig_bytes = value.signature.into_inner();
+				let mut reserved = [0u8; 64];
+				reserved[..sig_bytes.len().min(64)].copy_from_slice(&sig_bytes[..sig_bytes.len().min(64)]);
+				reserved
+			},
 			para_head: value.para_head,
 			validation_code_hash: value.validation_code_hash,
 		}
@@ -341,7 +346,8 @@ impl<H> CandidateReceiptV2<H> {
 	where
 		H: Encode,
 	{
-		CandidateHash(BlakeTwo256::hash_of(self))
+		use sp_runtime::traits::Hash;
+		CandidateHash(QuantumHasher::hash_of(self))
 	}
 }
 
@@ -614,7 +620,7 @@ impl<H: Copy> CandidateDescriptorV2<H> {
 		collator_id.extend_from_slice(self.reserved1.as_slice());
 
 		CollatorId::from_slice(&collator_id.as_slice())
-			.expect("Slice size is exactly 32 bytes; qed")
+			.expect("Valid collator ID bytes")
 	}
 
 	/// Returns the collator id if this is a v1 `CandidateDescriptor`
@@ -628,7 +634,7 @@ impl<H: Copy> CandidateDescriptorV2<H> {
 
 	fn rebuild_signature_field(&self) -> CollatorSignature {
 		CollatorSignature::from_slice(self.reserved2.as_slice())
-			.expect("Slice size is exactly 64 bytes; qed")
+			.expect("Valid signature bytes")
 	}
 
 	/// Returns the collator signature of `V1` candidate descriptors, `None` otherwise.

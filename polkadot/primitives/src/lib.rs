@@ -41,7 +41,7 @@ pub use v8::{
 	supermajority_threshold, well_known_keys, AbridgedHostConfiguration, AbridgedHrmpChannel,
 	AccountId, AccountIndex, AccountPublic, ApprovalVote, ApprovalVoteMultipleCandidates,
 	ApprovalVotingParams, AssignmentId, AsyncBackingParams, AuthorityDiscoveryId,
-	AvailabilityBitfield, BackedCandidate, Balance, BlakeTwo256, Block, BlockId, BlockNumber,
+	AvailabilityBitfield, BackedCandidate, Balance, Block, BlockId, BlockNumber, QuantumHasher,
 	CandidateCommitments, CandidateDescriptor, CandidateEvent, CandidateHash, CandidateIndex,
 	CandidateReceipt, CheckedDisputeStatementSet, CheckedMultiDisputeStatementSet, ChunkIndex,
 	CollatorId, CollatorSignature, CommittedCandidateReceipt, CompactStatement, ConsensusLog,

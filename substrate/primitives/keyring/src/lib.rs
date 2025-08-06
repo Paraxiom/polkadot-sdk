@@ -22,11 +22,12 @@
 extern crate alloc;
 use alloc::fmt;
 
-/// Test account crypto for sr25519.
-pub mod sr25519;
+/// Test account crypto for sphincs (quantum-safe).
+pub mod sphincs;
 
-/// Test account crypto for ed25519.
-pub mod ed25519;
+// Quantum-vulnerable crypto removed - use sphincs instead
+// pub mod sr25519;
+// pub mod ed25519;
 
 /// Test account crypto for bandersnatch.
 #[cfg(feature = "bandersnatch-experimental")]
@@ -34,8 +35,10 @@ pub mod bandersnatch;
 
 #[cfg(feature = "bandersnatch-experimental")]
 pub use bandersnatch::Keyring as BandersnatchKeyring;
-pub use ed25519::Keyring as Ed25519Keyring;
-pub use sr25519::Keyring as Sr25519Keyring;
+pub use sphincs::Keyring as SphincsKeyring;
+// Quantum-vulnerable keyrings removed
+// pub use ed25519::Keyring as Ed25519Keyring;
+// pub use sr25519::Keyring as Sr25519Keyring;
 
 #[derive(Debug)]
 /// Represents an error that occurs when parsing a string into a `KeyRing`.

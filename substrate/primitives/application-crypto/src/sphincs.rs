@@ -15,66 +15,51 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! SPHINCS+ (post-quantum) cryptographic types and functionality.
+//! SPHINCS+ crypto types using macro approach.
 
 use crate::{KeyTypeId, RuntimePublic};
 use alloc::vec::Vec;
 
-// TEMPORARY FIX: Stub out SPHINCS+ to avoid recursive type error
-// QuantumHarmony uses Falcon-512 instead of SPHINCS+ for post-quantum signatures
+pub use sp_core::sphincs::*;
 
-/// Placeholder for SPHINCS+ public key
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Public([u8; 32]);
+mod app {
+	crate::app_crypto!(super, sp_core::testing::SPHINCS);
+}
 
-/// Placeholder for SPHINCS+ signature
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Signature([u8; 64]);
-
-/// Placeholder for SPHINCS+ keypair
-#[cfg(feature = "full_crypto")]
-#[derive(Clone)]
-pub struct Pair;
+pub use app::{Pair as AppPair, Public as AppPublic, Signature as AppSignature};
 
 impl RuntimePublic for Public {
 	type Signature = Signature;
 
-	fn all(_key_type: KeyTypeId) -> crate::Vec<Self> {
-		Vec::new()
+	fn all(key_type: KeyTypeId) -> crate::Vec<Self> {
+		sp_io::crypto::sphincs_public_keys(key_type)
 	}
 
-	fn generate_pair(_key_type: KeyTypeId, _seed: Option<Vec<u8>>) -> Self {
-		Public([0u8; 32])
+	fn generate_pair(key_type: KeyTypeId, seed: Option<Vec<u8>>) -> Self {
+		sp_io::crypto::sphincs_generate(key_type, seed)
 	}
 
-	fn sign<M: AsRef<[u8]>>(&self, _key_type: KeyTypeId, _msg: &M) -> Option<Self::Signature> {
+	fn sign<M: AsRef<[u8]>>(&self, key_type: KeyTypeId, msg: &M) -> Option<Self::Signature> {
+		sp_io::crypto::sphincs_sign(key_type, self, msg.as_ref())
+	}
+
+	fn verify<M: AsRef<[u8]>>(&self, msg: &M, signature: &Self::Signature) -> bool {
+		let sig_bytes = sp_core::crypto::ByteArray::to_raw_vec(signature);
+		sp_io::crypto::sphincs_verify(sig_bytes, msg.as_ref(), self)
+	}
+
+	fn generate_proof_of_possession(&mut self, _key_type: KeyTypeId) -> Option<Self::Signature> {
+		// SPHINCS+ doesn't need proof of possession as it's deterministic
+		// and quantum-safe by design
 		None
 	}
 
-	fn verify<M: AsRef<[u8]>>(&self, _msg: &M, _signature: &Self::Signature) -> bool {
+	fn verify_proof_of_possession(&self, _proof: &Self::Signature) -> bool {
+		// SPHINCS+ doesn't need proof of possession verification
 		false
 	}
 
 	fn to_raw_vec(&self) -> Vec<u8> {
-		self.0.to_vec()
+		sp_core::crypto::ByteArray::to_raw_vec(self)
 	}
-
-	fn generate_proof_of_possession(&mut self, _key_type: KeyTypeId) -> Option<Self::Signature> {
-		None
-	}
-
-	fn verify_proof_of_possession(&self, _pop: &Self::Signature) -> bool {
-		false
-	}
-}
-
-// Re-export constants from sp_core if they exist
-pub use sp_core::sphincs::{
-	CRYPTO_ID, PUBLIC_KEY_SERIALIZED_SIZE, SIGNATURE_SERIALIZED_SIZE,
-	SECRET_KEY_SERIALIZED_SIZE,
-};
-
-#[cfg(test)]
-mod tests {
-	// Tests disabled for stub implementation
 }

@@ -70,30 +70,22 @@ pub mod testing;
 pub mod traits;
 pub mod uint;
 
-#[cfg(feature = "bandersnatch-experimental")]
-pub mod bandersnatch;
-#[cfg(feature = "bls-experimental")]
-pub mod bls;
+// Classical crypto modules removed for quantum-safety
+// Only quantum-safe cryptography is supported
 pub mod crypto_bytes;
-pub mod ecdsa;
-pub mod ed25519;
 pub mod paired_crypto;
-pub mod sr25519;
 pub mod sphincs;
 pub mod falcon;
 pub mod post_quantum;
 pub mod quantum_randomness;
-
-#[cfg(feature = "bls-experimental")]
-pub use bls::{bls377, bls381};
-#[cfg(feature = "bls-experimental")]
-pub use paired_crypto::{ecdsa_bls377, ecdsa_bls381};
+pub mod quantum_signature;
 
 pub use self::{
 	hash::{convert_hash, H160, H256, H512},
 	uint::{U256, U512},
 };
 pub use crypto::{ByteArray, DeriveJunction, Pair, Public};
+pub use quantum_signature::{QuantumSignature, QuantumPublic, QuantumSigner};
 
 #[cfg(not(substrate_runtime))]
 pub use self::hasher::blake2::Blake2Hasher;
