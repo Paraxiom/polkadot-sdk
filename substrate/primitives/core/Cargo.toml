@@ -65,12 +65,7 @@ sp-crypto-hashing = { workspace = true }
 # secp256k1 crate, better performance, intended to be used on host side (std)
 # secp256k1 = { features = ["alloc", "recovery"], optional = true, workspace = true } # Removed for quantum-safety
 
-# bls crypto
-sha2 = { optional = true, workspace = true }
-w3f-bls = { optional = true, workspace = true }
-
-# bandersnatch crypto
-ark-vrf = { optional = true, workspace = true, features = ["bandersnatch", "ring"] }
+# BLS and bandersnatch crypto removed for quantum-safety
 
 [target.'cfg(not(substrate_runtime))'.dependencies]
 sp-externalities = { workspace = true, default-features = false }
@@ -85,7 +80,7 @@ serde_json = { workspace = true, default-features = true }
 [features]
 default = ["std"]
 std = [
-	"ark-vrf?/std",
+	# "ark-vrf?/std", # Removed for quantum-safety
 	"bip39/rand",
 	"bip39/std",
 	"blake2/std",
@@ -115,7 +110,7 @@ std = [
 	# "secp256k1/global-context", # Removed for quantum-safety
 	# "secp256k1/std", # Removed for quantum-safety
 	"serde/std",
-	"sha2?/std",
+	# "sha2?/std", # Removed for quantum-safety (BLS dependency)
 	"sp-crypto-hashing/std",
 	"sp-debug-derive/std",
 	"sp-externalities/std",
@@ -125,7 +120,7 @@ std = [
 	"substrate-bip39/std",
 	"thiserror",
 	"tracing",
-	"w3f-bls?/std",
+	# "w3f-bls?/std", # Removed for quantum-safety
 	"zeroize/alloc",
 	"zeroize/std",
 ]
@@ -150,12 +145,5 @@ full_crypto = [
 	"blake2",
 ]
 
-# This feature adds BLS crypto primitives.
-# It should not be used in production since the implementation and interface may still
-# be subject to significant changes.
-bls-experimental = ["sha2", "w3f-bls"]
-
-# This feature adds Bandersnatch crypto primitives.
-# It should not be used in production since the implementation and interface may still
-# be subject to significant changes.
-bandersnatch-experimental = ["ark-vrf"]
+# BLS and Bandersnatch features removed for quantum-safety
+# Only quantum-safe cryptography is supported

@@ -1,7 +1,7 @@
 //! Quantum-safe stub implementations for crypto host functions
 
 use crate::{PassPointerAndReadCopy, PassPointerAndRead, AllocateAndReturnByCodec, PassByCodec, PassBy};
-use sp_core::{crypto::KeyTypeId, ed25519, sr25519, ecdsa};
+use sp_core::{crypto::KeyTypeId, sphincs};
 use alloc::vec::Vec;
 
 /// Ed25519 stub implementations

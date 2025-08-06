@@ -1,0 +1,12 @@
+--- a/src/frame/header.rs
++++ b/src/frame/header.rs
+@@ -298,7 +298,8 @@ impl StreamId {
+     }
+ 
+     pub fn is_server(self) -> bool {
+-        self.0.is_multiple_of(2)
++        // Replace unstable is_multiple_of with stable modulo operation
++        self.0 % 2 == 0
+     }
+ 
+     pub fn is_client(self) -> bool {

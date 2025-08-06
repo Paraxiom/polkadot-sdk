@@ -15,416 +15,51 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! SPHINCS+ (post-quantum) cryptographic types and functionality.
-//! 
-//! This implementation avoids the recursive type issues with large signatures
-//! by manually implementing the wrapper types instead of using app_crypto! macro.
+//! SPHINCS+ crypto types using macro approach.
 
-use crate::{KeyTypeId, RuntimePublic, AppCrypto, AppPublic, AppSignature, AppPair};
-use alloc::{vec::Vec, boxed::Box, format};
-use codec::{Decode, Encode, MaxEncodedLen};
-use scale_info::TypeInfo;
-use sp_core::{
-    crypto::{ByteArray, CryptoType, CryptoTypeId, Public as PublicTrait, 
-            Signature as SignatureTrait, Pair as PairTrait, UncheckedFrom, Wraps,
-            IsWrappedBy, DeriveError, SecretStringError, DeriveJunction, Derive},
-    sphincs,
-};
-use sp_std::convert::TryFrom;
+use crate::{KeyTypeId, RuntimePublic};
+use alloc::vec::Vec;
 
 pub use sp_core::sphincs::*;
 
-/// SPHINCS+ public key wrapper for application crypto
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Encode, Decode, MaxEncodedLen, TypeInfo)]
-#[derive(sp_core::RuntimeDebug)]
-#[codec(crate = codec)]
-pub struct Public(pub sphincs::Public);
-
-impl AsRef<[u8]> for Public {
-    fn as_ref(&self) -> &[u8] {
-        self.0.as_ref()
-    }
+mod app {
+	crate::app_crypto!(super, sp_core::testing::SPHINCS);
 }
 
-impl AsMut<[u8]> for Public {
-    fn as_mut(&mut self) -> &mut [u8] {
-        self.0.as_mut()
-    }
-}
-
-impl From<sphincs::Public> for Public {
-    fn from(x: sphincs::Public) -> Self {
-        Public(x)
-    }
-}
-
-impl From<Public> for sphincs::Public {
-    fn from(x: Public) -> Self {
-        x.0
-    }
-}
-
-impl AsRef<sphincs::Public> for Public {
-    fn as_ref(&self) -> &sphincs::Public {
-        &self.0
-    }
-}
-
-impl AsMut<sphincs::Public> for Public {
-    fn as_mut(&mut self) -> &mut sphincs::Public {
-        &mut self.0
-    }
-}
-
-impl TryFrom<&[u8]> for Public {
-    type Error = ();
-
-    fn try_from(data: &[u8]) -> Result<Self, Self::Error> {
-        sphincs::Public::try_from(data).map(Public)
-    }
-}
-
-impl ByteArray for Public {
-    const LEN: usize = sphincs::PUBLIC_KEY_SERIALIZED_SIZE;
-}
-
-impl PublicTrait for Public {}
-
-impl Derive for Public {
-    fn derive<Iter: Iterator<Item = DeriveJunction>>(&self, path: Iter) -> Option<Self> {
-        self.0.derive(path).map(Public)
-    }
-}
-
-impl CryptoType for Public {
-    type Pair = Pair;
-}
-
-impl AppPublic for Public {
-    type Generic = sphincs::Public;
-}
-
-impl Wraps for Public {
-    type Inner = sphincs::Public;
-}
-
-impl Public {
-    /// Convert into wrapped generic public key type.
-    pub fn into_inner(self) -> sphincs::Public {
-        self.0
-    }
-}
-
-#[cfg(feature = "serde")]
-impl serde::Serialize for Public {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        use crate::crypto::Ss58Codec;
-        serializer.serialize_str(&self.to_ss58check())
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de> serde::Deserialize<'de> for Public {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        use crate::crypto::Ss58Codec;
-        use alloc::string::String;
-        Public::from_ss58check(&String::deserialize(deserializer)?)
-            .map_err(|e| serde::de::Error::custom(format!("{:?}", e)))
-    }
-}
-
-impl core::fmt::Display for Public {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        use crate::crypto::Ss58Codec;
-        write!(f, "{}", self.0.to_ss58check())
-    }
-}
-
-/// SPHINCS+ signature wrapper that uses Box to avoid stack overflow with large signatures
-#[derive(Clone, Eq, PartialEq, Encode, Decode, TypeInfo)]
-#[derive(Hash)]
-#[derive(sp_core::RuntimeDebug)]
-#[codec(crate = codec)]
-pub struct Signature(Box<sphincs::Signature>);
-
-impl core::ops::Deref for Signature {
-    type Target = [u8];
-
-    fn deref(&self) -> &Self::Target {
-        self.as_ref()
-    }
-}
-
-impl AsRef<[u8]> for Signature {
-    fn as_ref(&self) -> &[u8] {
-        self.0.as_ref()
-    }
-}
-
-impl AsMut<[u8]> for Signature {
-    fn as_mut(&mut self) -> &mut [u8] {
-        // We can't easily get a mutable reference through Box<[u8; N]>
-        // This shouldn't be needed in practice for signatures
-        unimplemented!("Mutable access to signature data is not supported")
-    }
-}
-
-impl From<sphincs::Signature> for Signature {
-    fn from(x: sphincs::Signature) -> Self {
-        Signature(Box::new(x))
-    }
-}
-
-impl TryFrom<&[u8]> for Signature {
-    type Error = ();
-
-    fn try_from(data: &[u8]) -> Result<Self, Self::Error> {
-        sphincs::Signature::try_from(data)
-            .map(|s| Signature(Box::new(s)))
-    }
-}
-
-impl TryFrom<Vec<u8>> for Signature {
-    type Error = ();
-
-    fn try_from(data: Vec<u8>) -> Result<Self, Self::Error> {
-        Self::try_from(&data[..])
-    }
-}
-
-impl ByteArray for Signature {
-    const LEN: usize = sphincs::SIGNATURE_SERIALIZED_SIZE;
-}
-
-impl SignatureTrait for Signature {}
-
-impl CryptoType for Signature {
-    type Pair = Pair;
-}
-
-impl AppSignature for Signature {
-    type Generic = sphincs::Signature;
-}
-
-impl Wraps for Signature {
-    type Inner = sphincs::Signature;
-}
-
-impl Signature {
-    /// Convert into wrapped generic signature type.
-    pub fn into_inner(self) -> sphincs::Signature {
-        *self.0
-    }
-}
-
-/// SPHINCS+ key pair wrapper
-#[cfg(feature = "full_crypto")]
-#[derive(Clone)]
-pub struct Pair(sphincs::Pair);
-
-#[cfg(feature = "full_crypto")]
-impl From<sphincs::Pair> for Pair {
-    fn from(x: sphincs::Pair) -> Self {
-        Pair(x)
-    }
-}
-
-#[cfg(feature = "full_crypto")]
-impl From<Pair> for sphincs::Pair {
-    fn from(x: Pair) -> Self {
-        x.0
-    }
-}
-
-#[cfg(feature = "full_crypto")]
-impl AsRef<sphincs::Pair> for Pair {
-    fn as_ref(&self) -> &sphincs::Pair {
-        &self.0
-    }
-}
-
-#[cfg(feature = "full_crypto")]
-impl PairTrait for Pair {
-    type Public = Public;
-    type Seed = sphincs::Seed;
-    type Signature = Signature;
-
-    fn from_seed(seed: &Self::Seed) -> Self {
-        Pair(sphincs::Pair::from_seed(seed))
-    }
-
-    fn from_seed_slice(seed: &[u8]) -> Result<Self, SecretStringError> {
-        sphincs::Pair::from_seed_slice(seed).map(Pair)
-    }
-
-    fn derive<Iter: Iterator<Item = DeriveJunction>>(
-        &self,
-        path: Iter,
-        seed: Option<Self::Seed>,
-    ) -> Result<(Self, Option<Self::Seed>), DeriveError> {
-        self.0.derive(path, seed).map(|(p, s)| (Pair(p), s))
-    }
-
-    fn public(&self) -> Self::Public {
-        Public(self.0.public())
-    }
-
-    fn sign(&self, message: &[u8]) -> Self::Signature {
-        Signature::from(self.0.sign(message))
-    }
-
-    fn verify<M: AsRef<[u8]>>(sig: &Self::Signature, message: M, public: &Self::Public) -> bool {
-        sphincs::Pair::verify(&*sig.0, message, &public.0)
-    }
-
-    fn to_raw_vec(&self) -> Vec<u8> {
-        self.0.to_raw_vec()
-    }
-
-    #[cfg(feature = "std")]
-    fn generate_with_phrase(password: Option<&str>) -> (Self, String, Self::Seed) {
-        let (pair, phrase, seed) = sphincs::Pair::generate_with_phrase(password);
-        (Pair(pair), phrase, seed)
-    }
-
-    fn from_phrase(phrase: &str, password: Option<&str>) -> Result<(Self, Self::Seed), SecretStringError> {
-        sphincs::Pair::from_phrase(phrase, password).map(|(p, s)| (Pair(p), s))
-    }
-}
-
-#[cfg(feature = "full_crypto")]
-impl sp_core::proof_of_possession::ProofOfPossessionVerifier for Pair {
-    fn verify_proof_of_possession(
-        proof_of_possession: &Self::Signature,
-        allegedly_possessed_pubkey: &Self::Public,
-    ) -> bool {
-        // SPHINCS+ doesn't have a specific PoP mechanism
-        // We could implement one by signing a special message
-        false
-    }
-}
-
-#[cfg(feature = "full_crypto")]
-impl CryptoType for Pair {
-    type Pair = Pair;
-}
-
-#[cfg(feature = "full_crypto")]
-impl AppPair for Pair {
-    type Generic = sphincs::Pair;
-}
-
-#[cfg(feature = "full_crypto")]
-impl Wraps for Pair {
-    type Inner = sphincs::Pair;
-}
-
-#[cfg(feature = "full_crypto")]
-impl Pair {
-    /// Convert into wrapped generic key pair type.
-    pub fn into_inner(self) -> sphincs::Pair {
-        self.0
-    }
-}
-
-// Define the app crypto types
-impl AppCrypto for Public {
-    type Public = Public;
-    type Pair = Pair;
-    type Signature = Signature;
-    const ID: KeyTypeId = sp_core::testing::SPHINCS;
-    const CRYPTO_ID: CryptoTypeId = sphincs::CRYPTO_ID;
-}
-
-impl AppCrypto for Signature {
-    type Public = Public;
-    type Pair = Pair;
-    type Signature = Signature;
-    const ID: KeyTypeId = sp_core::testing::SPHINCS;
-    const CRYPTO_ID: CryptoTypeId = sphincs::CRYPTO_ID;
-}
-
-#[cfg(feature = "full_crypto")]
-impl AppCrypto for Pair {
-    type Public = Public;
-    type Pair = Pair;
-    type Signature = Signature;
-    const ID: KeyTypeId = sp_core::testing::SPHINCS;
-    const CRYPTO_ID: CryptoTypeId = sphincs::CRYPTO_ID;
-}
+pub use app::{Pair as AppPair, Public as AppPublic, Signature as AppSignature};
 
 impl RuntimePublic for Public {
-    type Signature = Signature;
+	type Signature = Signature;
 
-    fn all(key_type: KeyTypeId) -> Vec<Self> {
-        sp_io::crypto::sphincs_public_keys(key_type)
-            .into_iter()
-            .map(Public)
-            .collect()
-    }
+	fn all(key_type: KeyTypeId) -> crate::Vec<Self> {
+		sp_io::crypto::sphincs_public_keys(key_type)
+	}
 
-    fn generate_pair(key_type: KeyTypeId, seed: Option<Vec<u8>>) -> Self {
-        Public(sp_io::crypto::sphincs_generate(key_type, seed))
-    }
+	fn generate_pair(key_type: KeyTypeId, seed: Option<Vec<u8>>) -> Self {
+		sp_io::crypto::sphincs_generate(key_type, seed)
+	}
 
-    fn sign<M: AsRef<[u8]>>(&self, key_type: KeyTypeId, msg: &M) -> Option<Self::Signature> {
-        sp_io::crypto::sphincs_sign(key_type, &self.0, msg.as_ref())
-            .map(Signature::from)
-    }
+	fn sign<M: AsRef<[u8]>>(&self, key_type: KeyTypeId, msg: &M) -> Option<Self::Signature> {
+		sp_io::crypto::sphincs_sign(key_type, self, msg.as_ref())
+	}
 
-    fn verify<M: AsRef<[u8]>>(&self, msg: &M, signature: &Self::Signature) -> bool {
-        sp_io::crypto::sphincs_verify(&*signature.0, msg.as_ref(), &self.0)
-    }
+	fn verify<M: AsRef<[u8]>>(&self, msg: &M, signature: &Self::Signature) -> bool {
+		let sig_bytes = sp_core::crypto::ByteArray::to_raw_vec(signature);
+		sp_io::crypto::sphincs_verify(sig_bytes, msg.as_ref(), self)
+	}
 
-    fn to_raw_vec(&self) -> Vec<u8> {
-        ByteArray::to_raw_vec(&self.0)
-    }
+	fn generate_proof_of_possession(&mut self, _key_type: KeyTypeId) -> Option<Self::Signature> {
+		// SPHINCS+ doesn't need proof of possession as it's deterministic
+		// and quantum-safe by design
+		None
+	}
 
-    fn generate_proof_of_possession(&mut self, _key_type: KeyTypeId) -> Option<Self::Signature> {
-        // SPHINCS+ doesn't have a specific PoP mechanism
-        // We could sign a special message as proof
-        None
-    }
+	fn verify_proof_of_possession(&self, _proof: &Self::Signature) -> bool {
+		// SPHINCS+ doesn't need proof of possession verification
+		false
+	}
 
-    fn verify_proof_of_possession(&self, _pop: &Self::Signature) -> bool {
-        // SPHINCS+ doesn't have a specific PoP mechanism
-        false
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[cfg(feature = "full_crypto")]
-    use sp_core::crypto::Pair as TraitPair;
-
-    #[test]
-    #[cfg(feature = "full_crypto")]
-    fn generate_account_id() {
-        let seed = sphincs::Seed::from([0u8; 48]);
-        let pair = Pair::from_seed(&seed);
-        let public = pair.public();
-        
-        // Test signing and verification
-        let message = b"test message";
-        let signature = pair.sign(message);
-        assert!(Pair::verify(&signature, message, &public));
-    }
-    
-    #[test]
-    fn signature_boxing_works() {
-        // Test that we can create and use boxed signatures
-        let sig_bytes = [0u8; sphincs::SIGNATURE_SERIALIZED_SIZE];
-        let sig = sphincs::Signature::unchecked_from(sig_bytes);
-        let boxed_sig = Signature::from(sig);
-        
-        // Should be able to get reference to data
-        assert_eq!(boxed_sig.as_ref().len(), sphincs::SIGNATURE_SERIALIZED_SIZE);
-    }
+	fn to_raw_vec(&self) -> Vec<u8> {
+		sp_core::crypto::ByteArray::to_raw_vec(self)
+	}
 }

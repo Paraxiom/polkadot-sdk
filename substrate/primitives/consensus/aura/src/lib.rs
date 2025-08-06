@@ -28,41 +28,25 @@ use sp_runtime::ConsensusEngineId;
 pub mod digests;
 pub mod inherents;
 
-pub mod sr25519 {
-	mod app_sr25519 {
-		use sp_application_crypto::{app_crypto, key_types::AURA, sr25519};
-		app_crypto!(sr25519, AURA);
+pub mod sphincs {
+	mod app_sphincs {
+		use sp_application_crypto::{app_crypto, key_types::AURA, sphincs};
+		app_crypto!(sphincs, AURA);
 	}
 
 	sp_application_crypto::with_pair! {
-		/// An Aura authority keypair using S/R 25519 as its crypto.
-		pub type AuthorityPair = app_sr25519::Pair;
+		/// An Aura authority keypair using SPHINCS+ as its crypto.
+		pub type AuthorityPair = app_sphincs::Pair;
 	}
 
-	/// An Aura authority signature using S/R 25519 as its crypto.
-	pub type AuthoritySignature = app_sr25519::Signature;
+	/// An Aura authority signature using SPHINCS+ as its crypto.
+	pub type AuthoritySignature = app_sphincs::Signature;
 
-	/// An Aura authority identifier using S/R 25519 as its crypto.
-	pub type AuthorityId = app_sr25519::Public;
+	/// An Aura authority identifier using SPHINCS+ as its crypto.
+	pub type AuthorityId = app_sphincs::Public;
 }
 
-pub mod ed25519 {
-	mod app_ed25519 {
-		use sp_application_crypto::{app_crypto, ed25519, key_types::AURA};
-		app_crypto!(ed25519, AURA);
-	}
-
-	sp_application_crypto::with_pair! {
-		/// An Aura authority keypair using Ed25519 as its crypto.
-		pub type AuthorityPair = app_ed25519::Pair;
-	}
-
-	/// An Aura authority signature using Ed25519 as its crypto.
-	pub type AuthoritySignature = app_ed25519::Signature;
-
-	/// An Aura authority identifier using Ed25519 as its crypto.
-	pub type AuthorityId = app_ed25519::Public;
-}
+// Quantum-vulnerable ed25519 removed - use sphincs module instead
 
 pub use sp_consensus_slots::{Slot, SlotDuration};
 

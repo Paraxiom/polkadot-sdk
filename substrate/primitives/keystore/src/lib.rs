@@ -24,10 +24,7 @@ extern crate alloc;
 #[cfg(feature = "std")]
 pub mod testing;
 
-#[cfg(feature = "bandersnatch-experimental")]
-use sp_core::bandersnatch;
-#[cfg(feature = "bls-experimental")]
-use sp_core::bls381;
+// Bandersnatch and BLS removed for quantum-safety
 use sp_core::{
 	crypto::{ByteArray, CryptoTypeId, KeyTypeId},
 	sphincs,
@@ -70,140 +67,9 @@ pub trait Keystore: Send + Sync {
 
 	// Quantum-vulnerable ecdsa methods removed for quantum-safety
 
-	/// Returns all the bandersnatch public keys for the given key type.
-	#[cfg(feature = "bandersnatch-experimental")]
-	fn bandersnatch_public_keys(&self, key_type: KeyTypeId) -> Vec<bandersnatch::Public>;
+	// Bandersnatch methods removed for quantum-safety
 
-	/// Generate a new bandersnatch key pair for the given key type and an optional seed.
-	///
-	/// Returns an `bandersnatch::Public` key of the generated key pair or an `Err` if
-	/// something failed during key generation.
-	#[cfg(feature = "bandersnatch-experimental")]
-	fn bandersnatch_generate_new(
-		&self,
-		key_type: KeyTypeId,
-		seed: Option<&str>,
-	) -> Result<bandersnatch::Public, Error>;
-
-	/// Generate an bandersnatch signature for a given message.
-	///
-	/// Receives [`KeyTypeId`] and an [`bandersnatch::Public`] key to be able to map
-	/// them to a private key that exists in the keystore.
-	///
-	/// Returns an [`bandersnatch::Signature`] or `None` in case the given `key_type`
-	/// and `public` combination doesn't exist in the keystore.
-	/// An `Err` will be returned if generating the signature itself failed.
-	#[cfg(feature = "bandersnatch-experimental")]
-	fn bandersnatch_sign(
-		&self,
-		key_type: KeyTypeId,
-		public: &bandersnatch::Public,
-		msg: &[u8],
-	) -> Result<Option<bandersnatch::Signature>, Error>;
-
-	/// Generate a bandersnatch VRF signature for the given data.
-	///
-	/// Receives [`KeyTypeId`] and an [`bandersnatch::Public`] key to be able to map
-	/// them to a private key that exists in the keystore.
-	///
-	/// Returns `None` if the given `key_type` and `public` combination doesn't
-	/// exist in the keystore or an `Err` when something failed.
-	#[cfg(feature = "bandersnatch-experimental")]
-	fn bandersnatch_vrf_sign(
-		&self,
-		key_type: KeyTypeId,
-		public: &bandersnatch::Public,
-		input: &bandersnatch::vrf::VrfSignData,
-	) -> Result<Option<bandersnatch::vrf::VrfSignature>, Error>;
-
-	/// Generate a bandersnatch VRF pre-output for a given input data.
-	///
-	/// Receives [`KeyTypeId`] and an [`bandersnatch::Public`] key to be able to map
-	/// them to a private key that exists in the keystore.
-	///
-	/// Returns `None` if the given `key_type` and `public` combination doesn't
-	/// exist in the keystore or an `Err` when something failed.
-	#[cfg(feature = "bandersnatch-experimental")]
-	fn bandersnatch_vrf_pre_output(
-		&self,
-		key_type: KeyTypeId,
-		public: &bandersnatch::Public,
-		input: &bandersnatch::vrf::VrfInput,
-	) -> Result<Option<bandersnatch::vrf::VrfPreOutput>, Error>;
-
-	/// Generate a bandersnatch ring-VRF signature for the given data.
-	///
-	/// Receives [`KeyTypeId`] and an [`bandersnatch::Public`] key to be able to map
-	/// them to a private key that exists in the keystore.
-	///
-	/// Also takes a [`bandersnatch::ring_vrf::RingProver`] instance obtained from
-	/// a valid [`bandersnatch::ring_vrf::RingContext`].
-	///
-	/// The ring signature is verifiable if the public key corresponding to the
-	/// signing [`bandersnatch::Pair`] is part of the ring from which the
-	/// [`bandersnatch::ring_vrf::RingProver`] has been constructed.
-	/// If not, the produced signature is just useless.
-	///
-	/// Returns `None` if the given `key_type` and `public` combination doesn't
-	/// exist in the keystore or an `Err` when something failed.
-	#[cfg(feature = "bandersnatch-experimental")]
-	fn bandersnatch_ring_vrf_sign(
-		&self,
-		key_type: KeyTypeId,
-		public: &bandersnatch::Public,
-		input: &bandersnatch::vrf::VrfSignData,
-		prover: &bandersnatch::ring_vrf::RingProver,
-	) -> Result<Option<bandersnatch::ring_vrf::RingVrfSignature>, Error>;
-
-	/// Returns all bls12-381 public keys for the given key type.
-	#[cfg(feature = "bls-experimental")]
-	fn bls381_public_keys(&self, id: KeyTypeId) -> Vec<bls381::Public>;
-
-	// Quantum-vulnerable ecdsa_bls381 methods removed for quantum-safety
-	// Note: While BLS381 is quantum-resistant, the paired ecdsa component is not
-
-	/// Generate a new bls381 key pair for the given key type and an optional seed.
-	///
-	/// Returns an `bls381::Public` key of the generated key pair or an `Err` if
-	/// something failed during key generation.
-	#[cfg(feature = "bls-experimental")]
-	fn bls381_generate_new(
-		&self,
-		key_type: KeyTypeId,
-		seed: Option<&str>,
-	) -> Result<bls381::Public, Error>;
-
-
-	/// Generate a bls381 signature for a given message.
-	///
-	/// Receives [`KeyTypeId`] and a [`bls381::Public`] key to be able to map
-	/// them to a private key that exists in the keystore.
-	///
-	/// Returns an [`bls381::Signature`] or `None` in case the given `key_type`
-	/// and `public` combination doesn't exist in the keystore.
-	/// An `Err` will be returned if generating the signature itself failed.
-	#[cfg(feature = "bls-experimental")]
-	fn bls381_sign(
-		&self,
-		key_type: KeyTypeId,
-		public: &bls381::Public,
-		msg: &[u8],
-	) -> Result<Option<bls381::Signature>, Error>;
-
-	/// Generate a bls381 Proof of Possession for a given public key
-	///
-	/// Receives ['KeyTypeId'] and a ['bls381::Public'] key to be able to map
-	/// them to a private key that exists in the keystore
-	///
-	/// Returns an ['bls381::Signature'] or 'None' in case the given 'key_type'
-	/// and 'public' combination doesn't exist in the keystore.
-	/// An 'Err' will be returned if generating the proof of possession itself failed.
-	#[cfg(feature = "bls-experimental")]
-	fn bls381_generate_proof_of_possession(
-		&self,
-		key_type: KeyTypeId,
-		public: &bls381::Public,
-	) -> Result<Option<bls381::Signature>, Error>;
+	// BLS methods removed for quantum-safety
 
 
 	/// Returns all **sphincs** public keys for the given key type.

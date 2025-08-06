@@ -121,7 +121,7 @@ impl QuantumPublic {
     }
     
     /// Get key type ID for the preferred quantum-safe algorithm
-    pub const ID: KeyTypeId = sphincs::SPHINCS_CRYPTO_ID;
+    pub const ID: KeyTypeId = KeyTypeId(*b"sphn");
     
     /// Get the public key as a byte slice
     pub fn as_slice(&self) -> &[u8] {

@@ -119,12 +119,6 @@ impl ByteArray for Public {
 	const LEN: usize = PUBLIC_KEY_SERIALIZED_SIZE;
 }
 
-impl Public {
-	/// Create from raw bytes array
-	pub fn from_raw(data: [u8; PUBLIC_KEY_SERIALIZED_SIZE]) -> Self {
-		Public(data)
-	}
-}
 
 
 
@@ -407,6 +401,9 @@ impl TraitPair for Pair {
 impl CryptoType for Pair {
 	type Pair = Pair;
 }
+
+// SPHINCS+ is non-aggregatable (cannot combine signatures)
+impl crate::proof_of_possession::NonAggregatable for Pair {}
 
 impl CryptoType for Public {
 	type Pair = Pair;
