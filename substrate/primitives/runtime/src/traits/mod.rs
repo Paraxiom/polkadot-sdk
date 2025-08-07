@@ -24,7 +24,7 @@ use crate::{
 		TransactionSource, TransactionValidity, TransactionValidityError, UnknownTransaction,
 		ValidTransaction,
 	},
-	DispatchResult,
+	DispatchResult, AccountId32,
 };
 use alloc::vec::Vec;
 use codec::{
@@ -84,21 +84,12 @@ pub trait IdentifyAccount {
 	fn into_account(self) -> Self::AccountId;
 }
 
-impl IdentifyAccount for sp_core::ed25519::Public {
-	type AccountId = Self;
-	fn into_account(self) -> Self {
-		self
-	}
-}
+// QUANTUM-SAFETY: IdentifyAccount implementations moved to quantum_stubs module
 
-impl IdentifyAccount for sp_core::sr25519::Public {
-	type AccountId = Self;
-	fn into_account(self) -> Self {
-		self
-	}
-}
+// QUANTUM-SAFETY: Use stub types for backward compatibility
+use crate::quantum_stubs::{ed25519, sr25519, ecdsa};
 
-impl IdentifyAccount for sp_core::ecdsa::Public {
+impl IdentifyAccount for ecdsa::Public {
 	type AccountId = Self;
 	fn into_account(self) -> Self {
 		self
@@ -119,38 +110,32 @@ pub trait Verify {
 	) -> bool;
 }
 
-impl Verify for sp_core::ed25519::Signature {
-	type Signer = sp_core::ed25519::Public;
+impl Verify for ed25519::Signature {
+	type Signer = ed25519::Public;
 
-	fn verify<L: Lazy<[u8]>>(&self, mut msg: L, signer: &sp_core::ed25519::Public) -> bool {
-		sp_io::crypto::ed25519_verify(self, msg.get(), signer)
+	fn verify<L: Lazy<[u8]>>(&self, _msg: L, _signer: &AccountId32) -> bool {
+		// QUANTUM-SAFETY: Always returns false
+		log::warn!("QUANTUM-SAFETY: ed25519 signature verification attempted - returning false");
+		false
 	}
 }
 
-impl Verify for sp_core::sr25519::Signature {
-	type Signer = sp_core::sr25519::Public;
+impl Verify for sr25519::Signature {
+	type Signer = sr25519::Public;
 
-	fn verify<L: Lazy<[u8]>>(&self, mut msg: L, signer: &sp_core::sr25519::Public) -> bool {
-		sp_io::crypto::sr25519_verify(self, msg.get(), signer)
+	fn verify<L: Lazy<[u8]>>(&self, _msg: L, _signer: &AccountId32) -> bool {
+		// QUANTUM-SAFETY: Always returns false
+		log::warn!("QUANTUM-SAFETY: sr25519 signature verification attempted - returning false");
+		false
 	}
 }
 
-impl Verify for sp_core::ecdsa::Signature {
-	type Signer = sp_core::ecdsa::Public;
-	fn verify<L: Lazy<[u8]>>(&self, mut msg: L, signer: &sp_core::ecdsa::Public) -> bool {
-		let sig_bytes = self.as_ref();
-		if sig_bytes.len() != 65 {
-			return false;
-		}
-		let mut sig_array = [0u8; 65];
-		sig_array.copy_from_slice(sig_bytes);
-		match sp_io::crypto::secp256k1_ecdsa_recover_compressed(
-			&sig_array,
-			&sp_io::hashing::blake2_256(msg.get()),
-		) {
-			Ok(pubkey) => signer.0 == pubkey,
-			_ => false,
-		}
+impl Verify for ecdsa::Signature {
+	type Signer = ecdsa::Public;
+	fn verify<L: Lazy<[u8]>>(&self, _msg: L, _signer: &ecdsa::Public) -> bool {
+		// QUANTUM-SAFETY: Always returns false
+		log::warn!("QUANTUM-SAFETY: ecdsa signature verification attempted - returning false");
+		false
 	}
 }
 

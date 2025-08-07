@@ -74,10 +74,12 @@ pub use sp_core::storage::{Storage, StorageChild};
 
 use sp_core::{
 	crypto::{self, ByteArray, FromEntropy},
-	ecdsa, ed25519,
 	hash::{H256, H512},
-	sr25519, sphincs,
+	sphincs,
 };
+
+// QUANTUM-SAFETY: Import stub types for backward compatibility
+use crate::quantum_stubs::{ed25519, sr25519, ecdsa};
 
 use alloc::vec;
 use codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
@@ -87,6 +89,7 @@ pub mod curve;
 pub mod generic;
 pub mod legacy;
 mod multiaddress;
+mod quantum_stubs;
 pub mod offchain;
 pub mod proving_trie;
 pub mod runtime_logger;
@@ -285,65 +288,18 @@ pub type ConsensusEngineId = [u8; 4];
 )]
 pub enum MultiSignature {
 	/// An Ed25519 signature.
-	Ed25519(ed25519::Signature),
+	// QUANTUM-SAFETY: Ed25519 removed - quantum-vulnerable
 	/// An Sr25519 signature.
-	Sr25519(sr25519::Signature),
+	// QUANTUM-SAFETY: Sr25519 removed - quantum-vulnerable
 	/// An ECDSA/SECP256k1 signature.
-	Ecdsa(ecdsa::Signature),
+	// QUANTUM-SAFETY: Ecdsa removed - quantum-vulnerable
 	/// A SPHINCS+ signature (quantum-safe).
 	SphincsPlus(sphincs::Signature),
 }
 
-impl From<ed25519::Signature> for MultiSignature {
-	fn from(x: ed25519::Signature) -> Self {
-		Self::Ed25519(x)
-	}
-}
-
-impl TryFrom<MultiSignature> for ed25519::Signature {
-	type Error = ();
-	fn try_from(m: MultiSignature) -> Result<Self, Self::Error> {
-		if let MultiSignature::Ed25519(x) = m {
-			Ok(x)
-		} else {
-			Err(())
-		}
-	}
-}
-
-impl From<sr25519::Signature> for MultiSignature {
-	fn from(x: sr25519::Signature) -> Self {
-		Self::Sr25519(x)
-	}
-}
-
-impl TryFrom<MultiSignature> for sr25519::Signature {
-	type Error = ();
-	fn try_from(m: MultiSignature) -> Result<Self, Self::Error> {
-		if let MultiSignature::Sr25519(x) = m {
-			Ok(x)
-		} else {
-			Err(())
-		}
-	}
-}
-
-impl From<ecdsa::Signature> for MultiSignature {
-	fn from(x: ecdsa::Signature) -> Self {
-		Self::Ecdsa(x)
-	}
-}
-
-impl TryFrom<MultiSignature> for ecdsa::Signature {
-	type Error = ();
-	fn try_from(m: MultiSignature) -> Result<Self, Self::Error> {
-		if let MultiSignature::Ecdsa(x) = m {
-			Ok(x)
-		} else {
-			Err(())
-		}
-	}
-}
+// QUANTUM-SAFETY: Ed25519 conversion removed - quantum-vulnerable
+// QUANTUM-SAFETY: Sr25519 conversion removed - quantum-vulnerable
+// QUANTUM-SAFETY: Ecdsa conversion removed - quantum-vulnerable
 
 impl From<sphincs::Signature> for MultiSignature {
 	fn from(x: sphincs::Signature) -> Self {
@@ -354,10 +310,9 @@ impl From<sphincs::Signature> for MultiSignature {
 impl TryFrom<MultiSignature> for sphincs::Signature {
 	type Error = ();
 	fn try_from(m: MultiSignature) -> Result<Self, Self::Error> {
-		if let MultiSignature::SphincsPlus(x) = m {
-			Ok(x)
-		} else {
-			Err(())
+		// QUANTUM-SAFETY: Only SphincsPlus is supported
+		match m {
+			MultiSignature::SphincsPlus(x) => Ok(x),
 		}
 	}
 }
@@ -378,23 +333,19 @@ impl TryFrom<MultiSignature> for sphincs::Signature {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MultiSigner {
 	/// An Ed25519 identity.
-	Ed25519(ed25519::Public),
+	// QUANTUM-SAFETY: Ed25519 removed - quantum-vulnerable
 	/// An Sr25519 identity.
-	Sr25519(sr25519::Public),
+	// QUANTUM-SAFETY: Sr25519 removed - quantum-vulnerable
 	/// An SECP256k1/ECDSA identity (actually, the Blake2 hash of the compressed pub key).
-	Ecdsa(ecdsa::Public),
+	// QUANTUM-SAFETY: Ecdsa removed - quantum-vulnerable
 	/// A SPHINCS+ identity (quantum-safe).
 	SphincsPlus(sphincs::Public),
 }
 
 impl FromEntropy for MultiSigner {
 	fn from_entropy(input: &mut impl codec::Input) -> Result<Self, codec::Error> {
-		Ok(match input.read_byte()? % 4 {
-			0 => Self::Ed25519(FromEntropy::from_entropy(input)?),
-			1 => Self::Sr25519(FromEntropy::from_entropy(input)?),
-			2 => Self::Ecdsa(FromEntropy::from_entropy(input)?),
-			3.. => Self::SphincsPlus(FromEntropy::from_entropy(input)?),
-		})
+		// QUANTUM-SAFETY: Only SphincsPlus is supported
+		Ok(Self::SphincsPlus(FromEntropy::from_entropy(input)?))
 	}
 }
 
@@ -404,16 +355,17 @@ impl<T: Into<H256>> crypto::UncheckedFrom<T> for MultiSigner {
 	fn unchecked_from(x: T) -> Self {
 		let h256: H256 = x.into();
 		let bytes: [u8; 32] = h256.into();
-		ed25519::Public::unchecked_from(bytes).into()
+		// QUANTUM-SAFETY: Use Sphincs as the only supported type
+		let mut extended = [0u8; 64];
+		extended[..32].copy_from_slice(&bytes);
+		Self::SphincsPlus(sphincs::Public::from(extended))
 	}
 }
 
 impl AsRef<[u8]> for MultiSigner {
 	fn as_ref(&self) -> &[u8] {
 		match *self {
-			Self::Ed25519(ref who) => who.as_ref(),
-			Self::Sr25519(ref who) => who.as_ref(),
-			Self::Ecdsa(ref who) => who.as_ref(),
+			// QUANTUM-SAFETY: Only SphincsPlus is supported
 			Self::SphincsPlus(ref who) => who.as_ref(),
 		}
 	}
@@ -423,64 +375,15 @@ impl traits::IdentifyAccount for MultiSigner {
 	type AccountId = AccountId32;
 	fn into_account(self) -> AccountId32 {
 		match self {
-			Self::Ed25519(who) => <[u8; 32]>::from(who).into(),
-			Self::Sr25519(who) => <[u8; 32]>::from(who).into(),
-			Self::Ecdsa(who) => sp_io::hashing::blake2_256(who.as_ref()).into(),
+			// QUANTUM-SAFETY: Only SphincsPlus is supported
 			Self::SphincsPlus(who) => sp_io::hashing::blake2_256(who.as_ref()).into(),
 		}
 	}
 }
 
-impl From<ed25519::Public> for MultiSigner {
-	fn from(x: ed25519::Public) -> Self {
-		Self::Ed25519(x)
-	}
-}
-
-impl TryFrom<MultiSigner> for ed25519::Public {
-	type Error = ();
-	fn try_from(m: MultiSigner) -> Result<Self, Self::Error> {
-		if let MultiSigner::Ed25519(x) = m {
-			Ok(x)
-		} else {
-			Err(())
-		}
-	}
-}
-
-impl From<sr25519::Public> for MultiSigner {
-	fn from(x: sr25519::Public) -> Self {
-		Self::Sr25519(x)
-	}
-}
-
-impl TryFrom<MultiSigner> for sr25519::Public {
-	type Error = ();
-	fn try_from(m: MultiSigner) -> Result<Self, Self::Error> {
-		if let MultiSigner::Sr25519(x) = m {
-			Ok(x)
-		} else {
-			Err(())
-		}
-	}
-}
-
-impl From<ecdsa::Public> for MultiSigner {
-	fn from(x: ecdsa::Public) -> Self {
-		Self::Ecdsa(x)
-	}
-}
-
-impl TryFrom<MultiSigner> for ecdsa::Public {
-	type Error = ();
-	fn try_from(m: MultiSigner) -> Result<Self, Self::Error> {
-		if let MultiSigner::Ecdsa(x) = m {
-			Ok(x)
-		} else {
-			Err(())
-		}
-	}
-}
+// QUANTUM-SAFETY: Ed25519 conversion removed - quantum-vulnerable
+// QUANTUM-SAFETY: Sr25519 conversion removed - quantum-vulnerable
+// QUANTUM-SAFETY: Ecdsa conversion removed - quantum-vulnerable
 
 impl From<sphincs::Public> for MultiSigner {
 	fn from(x: sphincs::Public) -> Self {
@@ -491,10 +394,9 @@ impl From<sphincs::Public> for MultiSigner {
 impl TryFrom<MultiSigner> for sphincs::Public {
 	type Error = ();
 	fn try_from(m: MultiSigner) -> Result<Self, Self::Error> {
-		if let MultiSigner::SphincsPlus(x) = m {
-			Ok(x)
-		} else {
-			Err(())
+		// QUANTUM-SAFETY: Only SphincsPlus is supported
+		match m {
+			MultiSigner::SphincsPlus(x) => Ok(x),
 		}
 	}
 }
@@ -503,9 +405,7 @@ impl TryFrom<MultiSigner> for sphincs::Public {
 impl std::fmt::Display for MultiSigner {
 	fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
 		match self {
-			Self::Ed25519(who) => write!(fmt, "ed25519: {}", who),
-			Self::Sr25519(who) => write!(fmt, "sr25519: {}", who),
-			Self::Ecdsa(who) => write!(fmt, "ecdsa: {}", who),
+			// QUANTUM-SAFETY: Only SphincsPlus is supported
 			Self::SphincsPlus(who) => write!(fmt, "sphincs+: {}", who),
 		}
 	}
@@ -516,19 +416,7 @@ impl Verify for MultiSignature {
 	fn verify<L: Lazy<[u8]>>(&self, mut msg: L, signer: &AccountId32) -> bool {
 		let who: [u8; 32] = *signer.as_ref();
 		match self {
-			Self::Ed25519(sig) => sig.verify(msg, &who.into()),
-			Self::Sr25519(sig) => sig.verify(msg, &who.into()),
-			Self::Ecdsa(sig) => {
-				let m = sp_io::hashing::blake2_256(msg.get());
-				let sig_bytes = sig.as_ref();
-				if sig_bytes.len() != 65 {
-					return false;
-				}
-				let mut sig_array = [0u8; 65];
-				sig_array.copy_from_slice(sig_bytes);
-				sp_io::crypto::secp256k1_ecdsa_recover_compressed(&sig_array, &m)
-					.map_or(false, |pubkey| sp_io::hashing::blake2_256(&pubkey) == who)
-			},
+			// QUANTUM-SAFETY: Only Sphincs signatures supported
 			Self::SphincsPlus(sig) => {
 				// For SPHINCS+, we need to recover the public key from the account ID
 				// This is a simplified verification - in production, you'd store the full public key
@@ -545,17 +433,10 @@ pub struct AnySignature(H512);
 
 impl Verify for AnySignature {
 	type Signer = sr25519::Public;
-	fn verify<L: Lazy<[u8]>>(&self, mut msg: L, signer: &sr25519::Public) -> bool {
-		let msg = msg.get();
-		sr25519::Signature::try_from(self.0.as_fixed_bytes().as_ref())
-			.map(|s| s.verify(msg, signer))
-			.unwrap_or(false) ||
-			ed25519::Signature::try_from(self.0.as_fixed_bytes().as_ref())
-				.map(|s| match ed25519::Public::from_slice(signer.as_ref()) {
-					Err(()) => false,
-					Ok(signer) => s.verify(msg, &signer),
-				})
-				.unwrap_or(false)
+	fn verify<L: Lazy<[u8]>>(&self, _msg: L, _signer: &AccountId32) -> bool {
+		// QUANTUM-SAFETY: Legacy signature verification always returns false
+		log::warn!("QUANTUM-SAFETY: AnySignature verification attempted - returning false");
+		false
 	}
 }
 
@@ -1235,21 +1116,7 @@ mod tests {
 		);
 	}
 
-	#[test]
-	fn multi_signature_ecdsa_verify_works() {
-		let msg = &b"test-message"[..];
-		let (pair, _) = ecdsa::Pair::generate();
-
-		let signature = pair.sign(&msg);
-		assert!(ecdsa::Pair::verify(&signature, msg, &pair.public()));
-
-		let multi_sig = MultiSignature::from(signature);
-		let multi_signer = MultiSigner::from(pair.public());
-		assert!(multi_sig.verify(msg, &multi_signer.into_account()));
-
-		let multi_signer = MultiSigner::from(pair.public());
-		assert!(multi_sig.verify(msg, &multi_signer.into_account()));
-	}
+	// QUANTUM-SAFETY: Ecdsa test removed
 
 	#[test]
 	fn execute_and_generate_proof_works() {

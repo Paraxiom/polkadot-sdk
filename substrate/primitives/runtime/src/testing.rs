@@ -26,7 +26,9 @@ use crate::{
 };
 use serde::{de::Error as DeError, Deserialize, Deserializer, Serialize};
 use sp_core::crypto::{key_types, ByteArray, CryptoType, Dummy};
-pub use sp_core::{sr25519, H256};
+pub use sp_core::H256;
+// QUANTUM-SAFETY: Use stub for sr25519
+use crate::quantum_stubs::sr25519;
 use std::{cell::RefCell, fmt::Debug};
 
 /// A dummy type which can be used instead of regular cryptographic primitives.
