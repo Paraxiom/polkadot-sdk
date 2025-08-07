@@ -20,7 +20,7 @@ tracing = { workspace = true }
 
 frame-support = { workspace = true }
 frame-system = { workspace = true }
-pallet-revive = { workspace = true }
+# pallet-revive = { workspace = true } # Removed - requires secp256k1
 sp-core = { workspace = true }
 sp-io = { workspace = true }
 sp-runtime = { workspace = true }
@@ -52,7 +52,7 @@ std = [
 	"frame-support/std",
 	"frame-system/std",
 	"pallet-balances/std",
-	"pallet-revive/std",
+	# "pallet-revive/std", # Removed - requires secp256k1
 	"pallet-timestamp/std",
 	"scale-info/std",
 	"serde",
@@ -71,7 +71,7 @@ runtime-benchmarks = [
 	"frame-system/runtime-benchmarks",
 	"pallet-assets/runtime-benchmarks",
 	"pallet-balances/runtime-benchmarks",
-	"pallet-revive/runtime-benchmarks",
+	# "pallet-revive/runtime-benchmarks", # Removed - requires secp256k1
 	"pallet-timestamp/runtime-benchmarks",
 	"polkadot-parachain-primitives/runtime-benchmarks",
 	"polkadot-runtime-parachains/runtime-benchmarks",
@@ -87,7 +87,7 @@ try-runtime = [
 	"frame-system/try-runtime",
 	"pallet-assets/try-runtime",
 	"pallet-balances/try-runtime",
-	"pallet-revive/try-runtime",
+	# "pallet-revive/try-runtime", # Removed - requires secp256k1
 	"pallet-timestamp/try-runtime",
 	"polkadot-runtime-parachains/try-runtime",
 	"sp-runtime/try-runtime",

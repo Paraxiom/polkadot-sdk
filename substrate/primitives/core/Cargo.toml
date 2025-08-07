@@ -49,6 +49,7 @@ ss58-registry = { workspace = true }
 substrate-bip39 = { workspace = true }
 thiserror = { optional = true, workspace = true }
 pqcrypto-sphincsplus = { version = "0.7.1", default-features = false, optional = true }
+pqcrypto-traits = { version = "0.3.5", default-features = false }
 tracing = { optional = true, workspace = true, default-features = true }
 zeroize = { workspace = true }
 
@@ -143,6 +144,7 @@ serde = [
 # For the regular wasm runtime builds this should not be used.
 full_crypto = [
 	"blake2",
+	"pqcrypto-sphincsplus",
 ]
 
 # BLS and Bandersnatch features removed for quantum-safety

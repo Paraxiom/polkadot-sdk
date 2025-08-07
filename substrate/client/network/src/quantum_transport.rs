@@ -196,12 +196,8 @@ where
 		self: Pin<&mut Self>,
 		cx: &mut Context<'_>,
 	) -> Poll<TransportEvent<Self::ListenerUpgrade, Self::Error>> {
-<<<<<<< HEAD
 		let this = self.get_mut();
 		match Pin::new(&mut this.inner).poll(cx) {
-=======
-		match Pin::new(&mut self.inner).poll(cx) {
->>>>>>> quantum-safe-migration
 			Poll::Ready(event) => {
 				let event = event.map_upgrade(|upgrade| {
 					let _qkd_client = this.qkd_client.clone();

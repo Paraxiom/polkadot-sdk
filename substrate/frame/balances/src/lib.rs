@@ -177,7 +177,8 @@ use frame_support::{
 use frame_system as system;
 pub use impl_currency::{NegativeImbalance, PositiveImbalance};
 use scale_info::TypeInfo;
-use sp_core::{sr25519::Pair as SrPair, Pair};
+// QUANTUM-SAFETY: Use sphincs for dev accounts instead of sr25519
+use sp_core::{sphincs::Pair as SphincsKeyPair, Pair};
 use sp_runtime::{
 	traits::{
 		AtLeast32BitUnsigned, CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Saturating,
@@ -1321,8 +1322,8 @@ pub mod pallet {
 				// Replace "{}" in the derivation string with the index.
 				let derivation_string = derivation.replace("{}", &index.to_string());
 
-				// Generate the key pair from the derivation string using sr25519.
-				let pair: SrPair = Pair::from_string(&derivation_string, None)
+				// Generate the key pair from the derivation string using quantum-safe sphincs.
+				let pair: SphincsKeyPair = Pair::from_string(&derivation_string, None)
 					.expect(&format!("Failed to parse derivation string: {derivation_string}"));
 
 				// Convert the public key to AccountId.

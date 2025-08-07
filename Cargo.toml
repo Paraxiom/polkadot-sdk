@@ -420,13 +420,13 @@ members = [
 	"substrate/frame/recovery",
 	"substrate/frame/referenda",
 	"substrate/frame/remark",
-	"substrate/frame/revive",
-	"substrate/frame/revive/dev-node/node",
-	"substrate/frame/revive/dev-node/runtime",
-	"substrate/frame/revive/fixtures",
-	"substrate/frame/revive/proc-macro",
-	"substrate/frame/revive/rpc",
-	"substrate/frame/revive/uapi",
+	# "substrate/frame/revive", # Removed - requires secp256k1 (classical crypto)
+	# "substrate/frame/revive/dev-node/node", # Removed - requires secp256k1
+	# "substrate/frame/revive/dev-node/runtime", # Removed - requires secp256k1
+	# "substrate/frame/revive/fixtures", # Removed - requires secp256k1
+	# "substrate/frame/revive/proc-macro", # Removed - requires secp256k1
+	# "substrate/frame/revive/rpc", # Removed - requires secp256k1
+	# "substrate/frame/revive/uapi", # Removed - requires secp256k1
 	"substrate/frame/root-offences",
 	"substrate/frame/root-testing",
 	"substrate/frame/safe-mode",
@@ -1031,11 +1031,11 @@ pallet-ranked-collective = { path = "substrate/frame/ranked-collective", default
 pallet-recovery = { path = "substrate/frame/recovery", default-features = false }
 pallet-referenda = { path = "substrate/frame/referenda", default-features = false }
 pallet-remark = { default-features = false, path = "substrate/frame/remark" }
-pallet-revive = { path = "substrate/frame/revive", default-features = false }
-pallet-revive-eth-rpc = { path = "substrate/frame/revive/rpc", default-features = false }
-pallet-revive-fixtures = { path = "substrate/frame/revive/fixtures", default-features = false }
-pallet-revive-proc-macro = { path = "substrate/frame/revive/proc-macro", default-features = false }
-pallet-revive-uapi = { path = "substrate/frame/revive/uapi", default-features = false }
+# pallet-revive = { path = "substrate/frame/revive", default-features = false } # Removed - requires secp256k1
+# pallet-revive-eth-rpc = { path = "substrate/frame/revive/rpc", default-features = false } # Removed - requires secp256k1
+# pallet-revive-fixtures = { path = "substrate/frame/revive/fixtures", default-features = false } # Removed - requires secp256k1
+# pallet-revive-proc-macro = { path = "substrate/frame/revive/proc-macro", default-features = false } # Removed - requires secp256k1
+# pallet-revive-uapi = { path = "substrate/frame/revive/uapi", default-features = false } # Removed - requires secp256k1
 pallet-root-offences = { default-features = false, path = "substrate/frame/root-offences" }
 pallet-root-testing = { path = "substrate/frame/root-testing", default-features = false }
 pallet-safe-mode = { default-features = false, path = "substrate/frame/safe-mode" }
@@ -1050,8 +1050,8 @@ pallet-staking = { path = "substrate/frame/staking", default-features = false }
 pallet-staking-reward-curve = { path = "substrate/frame/staking/reward-curve", default-features = false }
 pallet-staking-reward-fn = { path = "substrate/frame/staking/reward-fn", default-features = false }
 pallet-staking-runtime-api = { path = "substrate/frame/staking/runtime-api", default-features = false }
-revive-dev-node = { path = "substrate/frame/revive/dev-node/node" }
-revive-dev-runtime = { path = "substrate/frame/revive/dev-node/runtime" }
+# revive-dev-node = { path = "substrate/frame/revive/dev-node/node" } # Removed - requires secp256k1
+# revive-dev-runtime = { path = "substrate/frame/revive/dev-node/runtime" } # Removed - requires secp256k1
 # TODO: remove the reward stuff as they are not needed here
 pallet-staking-async = { path = "substrate/frame/staking-async", default-features = false }
 pallet-staking-async-ah-client = { path = "substrate/frame/staking-async/ah-client", default-features = false }

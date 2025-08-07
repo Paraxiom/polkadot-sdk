@@ -89,7 +89,7 @@ pub mod curve;
 pub mod generic;
 pub mod legacy;
 mod multiaddress;
-mod quantum_stubs;
+pub mod quantum_stubs;
 pub mod offchain;
 pub mod proving_trie;
 pub mod runtime_logger;

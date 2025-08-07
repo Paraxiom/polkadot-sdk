@@ -16,7 +16,7 @@ bp-parachains = { workspace = true }
 bp-polkadot-core = { workspace = true }
 bp-runtime = { features = ["test-helpers"], workspace = true }
 codec = { workspace = true }
-ed25519-dalek = { workspace = true }
+# ed25519-dalek removed for quantum-safety
 finality-grandpa = { workspace = true }
 sp-application-crypto = { workspace = true }
 sp-consensus-grandpa = { workspace = true }
@@ -33,7 +33,6 @@ std = [
 	"bp-polkadot-core/std",
 	"bp-runtime/std",
 	"codec/std",
-	"ed25519-dalek/std",
 	"finality-grandpa/std",
 	"sp-application-crypto/std",
 	"sp-consensus-grandpa/std",

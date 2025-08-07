@@ -15,51 +15,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Simple ECDSA secp256k1 API.
-//!
-//! Provides an extension trait for [`sp_core::ecdsa::Public`] to do certain operations.
+//! QUANTUM-SAFETY: This module is deprecated - ECDSA is quantum-vulnerable
+//! 
+//! This module previously provided ECDSA secp256k1 support but has been
+//! stubbed out for quantum safety. All functionality returns errors or false.
 
-use sp_core::{crypto::ByteArray, ecdsa::Public};
+#![deprecated(since = "31.0.0", note = "ECDSA is quantum-vulnerable. Use quantum-safe alternatives.")]
 
-/// Extension trait for [`Public`] to be used from inside the runtime.
-///
-/// # Note
-///
-/// This is needed because host functions cannot be called from within
-/// `sp_core` due to cyclic dependencies  on `sp_io`.
+use sp_runtime::quantum_stubs::ecdsa::Public;
+
+/// Extension trait for [`Public`] - DEPRECATED: All methods return errors
+#[deprecated(since = "31.0.0", note = "ECDSA is quantum-vulnerable")]
 pub trait ECDSAExt {
-	/// Returns Ethereum address calculated from this ECDSA public key.
-	fn to_eth_address(&self) -> Result<[u8; 20], ()>;
+	/// Verify a signature - ALWAYS RETURNS FALSE
+	fn verify_from_utf8<V>(&self, msg: V, signature: &[u8; 65]) -> bool
+	where
+		V: AsRef<[u8]>;
 }
 
 impl ECDSAExt for Public {
-	fn to_eth_address(&self) -> Result<[u8; 20], ()> {
-		use k256::{elliptic_curve::sec1::ToEncodedPoint, PublicKey};
-
-		PublicKey::from_sec1_bytes(self.as_slice()).map_err(drop).and_then(|pub_key| {
-			// uncompress the key
-			let uncompressed = pub_key.to_encoded_point(false);
-			// convert to ETH address
-			<[u8; 20]>::try_from(
-				sp_io::hashing::keccak_256(&uncompressed.as_bytes()[1..])[12..].as_ref(),
-			)
-			.map_err(drop)
-		})
-	}
-}
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-	use sp_core::{ecdsa, Pair};
-
-	#[test]
-	fn to_eth_address_works() {
-		let pair = ecdsa::Pair::from_string("//Alice//password", None).unwrap();
-		let eth_address = pair.public().to_eth_address().unwrap();
-		assert_eq!(
-			array_bytes::bytes2hex("0x", &eth_address),
-			"0xdc1cce4263956850a3c8eb349dc6fc3f7792cb27"
-		);
+	fn verify_from_utf8<V>(&self, _msg: V, _signature: &[u8; 65]) -> bool
+	where
+		V: AsRef<[u8]>,
+	{
+		log::warn!("QUANTUM-SAFETY: ECDSA verification attempted - returning false");
+		false
 	}
 }

@@ -127,7 +127,7 @@ std = [
 	"pallet-recovery?/std",
 	"pallet-referenda?/std",
 	"pallet-remark?/std",
-	"pallet-revive?/std",
+	# "pallet-revive?/std", # Removed - requires secp256k1
 	"pallet-root-offences?/std",
 	"pallet-root-testing?/std",
 	"pallet-safe-mode?/std",
@@ -311,7 +311,7 @@ runtime-benchmarks = [
 	"pallet-recovery?/runtime-benchmarks",
 	"pallet-referenda?/runtime-benchmarks",
 	"pallet-remark?/runtime-benchmarks",
-	"pallet-revive?/runtime-benchmarks",
+	# "pallet-revive?/runtime-benchmarks", # Removed - requires secp256k1
 	"pallet-root-offences?/runtime-benchmarks",
 	"pallet-safe-mode?/runtime-benchmarks",
 	"pallet-salary?/runtime-benchmarks",
@@ -446,7 +446,7 @@ try-runtime = [
 	"pallet-recovery?/try-runtime",
 	"pallet-referenda?/try-runtime",
 	"pallet-remark?/try-runtime",
-	"pallet-revive?/try-runtime",
+	# "pallet-revive?/try-runtime", # Removed - requires secp256k1
 	"pallet-root-offences?/try-runtime",
 	"pallet-root-testing?/try-runtime",
 	"pallet-safe-mode?/try-runtime",
@@ -659,9 +659,9 @@ runtime-full = [
 	"pallet-recovery",
 	"pallet-referenda",
 	"pallet-remark",
-	"pallet-revive",
-	"pallet-revive-proc-macro",
-	"pallet-revive-uapi",
+	# "pallet-revive", # Removed - requires secp256k1
+	# "pallet-revive-proc-macro", # Removed - requires secp256k1
+	# "pallet-revive-uapi", # Removed - requires secp256k1
 	"pallet-root-offences",
 	"pallet-root-testing",
 	"pallet-safe-mode",
@@ -859,7 +859,7 @@ node = [
 	"mmr-gadget",
 	"mmr-rpc",
 	"pallet-contracts-mock-network",
-	"pallet-revive-eth-rpc",
+	# "pallet-revive-eth-rpc", # Removed - requires secp256k1
 	"pallet-transaction-payment-rpc",
 	"parachains-runtimes-test-utils",
 	"polkadot-approval-distribution",
@@ -1602,20 +1602,20 @@ default-features = false
 optional = true
 path = "../substrate/frame/remark"
 
-[dependencies.pallet-revive]
-default-features = false
-optional = true
-path = "../substrate/frame/revive"
+# [dependencies.pallet-revive] # Removed - requires secp256k1
+# default-features = false
+# optional = true
+# path = "../substrate/frame/revive"
 
-[dependencies.pallet-revive-proc-macro]
-default-features = false
-optional = true
-path = "../substrate/frame/revive/proc-macro"
+# [dependencies.pallet-revive-proc-macro] # Removed - requires secp256k1
+# default-features = false
+# optional = true
+# path = "../substrate/frame/revive/proc-macro"
 
-[dependencies.pallet-revive-uapi]
-default-features = false
-optional = true
-path = "../substrate/frame/revive/uapi"
+# [dependencies.pallet-revive-uapi] # Removed - requires secp256k1
+# default-features = false
+# optional = true
+# path = "../substrate/frame/revive/uapi"
 
 [dependencies.pallet-root-offences]
 default-features = false
@@ -2277,10 +2277,10 @@ default-features = false
 optional = true
 path = "../substrate/frame/contracts/mock-network"
 
-[dependencies.pallet-revive-eth-rpc]
-default-features = false
-optional = true
-path = "../substrate/frame/revive/rpc"
+# [dependencies.pallet-revive-eth-rpc] # Removed - requires secp256k1
+# default-features = false
+# optional = true
+# path = "../substrate/frame/revive/rpc"
 
 [dependencies.pallet-transaction-payment-rpc]
 default-features = false

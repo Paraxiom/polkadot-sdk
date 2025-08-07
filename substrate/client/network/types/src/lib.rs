@@ -16,6 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+// QUANTUM-SAFETY: Re-export ed25519 for network compatibility only
+// This is needed for p2p networking compatibility with existing networks
 pub mod ed25519;
 pub mod kad;
 pub mod multiaddr;

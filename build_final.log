@@ -1,9 +1,0 @@
-error: no bin target named `quantumharmony`.
-Available bin targets:
-    polkadot
-    polkadot-execute-worker
-    polkadot-prepare-worker
-    polkadot-omni-node
-    polkadot-parachain
-    substrate-node
-

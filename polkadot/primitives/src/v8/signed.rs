@@ -23,7 +23,9 @@ use sp_application_crypto::AppCrypto;
 #[cfg(feature = "std")]
 use sp_keystore::{Error as KeystoreError, KeystorePtr, Keystore};
 
-use sp_core::{RuntimeDebug, sr25519, ed25519, ecdsa, sphincs};
+use sp_core::{RuntimeDebug, sphincs};
+// QUANTUM-SAFETY: Use stub types for classical crypto
+use sp_runtime::quantum_stubs::{sr25519, ed25519, ecdsa};
 use sp_runtime::traits::AppVerify;
 use codec::Decode as _;
 use sp_core::crypto::CryptoTypeId;
@@ -282,35 +284,8 @@ impl<Payload: EncodeAs<RealPayload>, RealPayload: Encode> UncheckedSigned<Payloa
 	) -> Result<Option<Self>, KeystoreError> {
 		let data = Self::payload_data(&payload, context);
 		
-		// Support quantum-safe signing using the generic sign_with method
+		// Support quantum-safe signing - only SPHINCS+ is supported
 		let signature = match key {
-			#[allow(deprecated)]
-			QuantumPublic::Sr25519(public) => {
-				// Sr25519 is quantum-vulnerable and deprecated, but we maintain backwards compatibility
-				keystore.sign_with(PARACHAIN_KEY_TYPE_ID, sr25519::CRYPTO_ID, public.as_ref(), &data)?
-					.and_then(|sig_bytes| {
-						sr25519::Signature::decode(&mut sig_bytes.as_slice()).ok()
-							.map(|sig| QuantumSignature::Sr25519(sig))
-					})
-			},
-			#[allow(deprecated)]
-			QuantumPublic::Ed25519(public) => {
-				// Ed25519 is quantum-vulnerable and deprecated, but we maintain backwards compatibility
-				keystore.sign_with(PARACHAIN_KEY_TYPE_ID, ed25519::CRYPTO_ID, public.as_ref(), &data)?
-					.and_then(|sig_bytes| {
-						ed25519::Signature::decode(&mut sig_bytes.as_slice()).ok()
-							.map(|sig| QuantumSignature::Ed25519(sig))
-					})
-			},
-			#[allow(deprecated)]
-			QuantumPublic::Ecdsa(public) => {
-				// ECDSA is quantum-vulnerable and deprecated, but we maintain backwards compatibility
-				keystore.sign_with(PARACHAIN_KEY_TYPE_ID, ecdsa::CRYPTO_ID, public.as_ref(), &data)?
-					.and_then(|sig_bytes| {
-						ecdsa::Signature::decode(&mut sig_bytes.as_slice()).ok()
-							.map(|sig| QuantumSignature::Ecdsa(sig))
-					})
-			},
 			QuantumPublic::Sphincs(public) => {
 				// SPHINCS+ is quantum-safe
 				keystore.sign_with(PARACHAIN_KEY_TYPE_ID, sphincs::CRYPTO_ID, public.as_ref(), &data)?

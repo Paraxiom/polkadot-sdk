@@ -55,7 +55,7 @@ pallet-nomination-pools-runtime-api = { workspace = true }
 pallet-preimage = { workspace = true }
 pallet-proxy = { workspace = true }
 pallet-referenda = { workspace = true }
-pallet-revive = { workspace = true }
+# pallet-revive = { workspace = true } # Removed - requires secp256k1
 pallet-scheduler = { workspace = true }
 pallet-session = { workspace = true }
 pallet-staking = { workspace = true }
@@ -135,7 +135,7 @@ snowbridge-runtime-common = { workspace = true }
 [dev-dependencies]
 alloy-core = { workspace = true, features = ["sol-types"] }
 asset-test-utils = { workspace = true, default-features = true }
-pallet-revive-fixtures = { workspace = true, default-features = true }
+# pallet-revive-fixtures = { workspace = true, default-features = true } # Removed - requires secp256k1
 parachains-runtimes-test-utils = { workspace = true, default-features = true }
 
 [build-dependencies]
@@ -181,7 +181,7 @@ runtime-benchmarks = [
 	"pallet-preimage/runtime-benchmarks",
 	"pallet-proxy/runtime-benchmarks",
 	"pallet-referenda/runtime-benchmarks",
-	"pallet-revive/runtime-benchmarks",
+	# "pallet-revive/runtime-benchmarks", # Removed - requires secp256k1
 	"pallet-scheduler/runtime-benchmarks",
 	"pallet-staking-async-rc-client/runtime-benchmarks",
 	"pallet-staking-async/runtime-benchmarks",
@@ -250,7 +250,7 @@ try-runtime = [
 	"pallet-preimage/try-runtime",
 	"pallet-proxy/try-runtime",
 	"pallet-referenda/try-runtime",
-	"pallet-revive/try-runtime",
+	# "pallet-revive/try-runtime", # Removed - requires secp256k1
 	"pallet-scheduler/try-runtime",
 	"pallet-session/try-runtime",
 	"pallet-staking-async-rc-client/try-runtime",
@@ -329,7 +329,7 @@ std = [
 	"pallet-preimage/std",
 	"pallet-proxy/std",
 	"pallet-referenda/std",
-	"pallet-revive/std",
+	# "pallet-revive/std", # Removed - requires secp256k1
 	"pallet-scheduler/std",
 	"pallet-session/std",
 	"pallet-staking-async-rc-client/std",

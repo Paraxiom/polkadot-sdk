@@ -12,7 +12,9 @@ documentation = "https://docs.rs/sc-network-types"
 [dependencies]
 bs58 = { workspace = true, default-features = true }
 bytes = { workspace = true, default-features = false }
-ed25519-dalek = { workspace = true, default-features = true }
+# QUANTUM-SAFETY: ed25519-dalek is required for p2p network compatibility only
+# This is NOT used for consensus or blockchain security - only for network transport
+ed25519-dalek = "2.1"
 libp2p-identity = { features = ["ed25519", "peerid", "rand"], workspace = true }
 libp2p-kad = { workspace = true, default-features = false }
 litep2p = { workspace = true }
