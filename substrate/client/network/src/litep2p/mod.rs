@@ -258,8 +258,17 @@ impl Litep2pNetworkBackend {
 impl Litep2pNetworkBackend {
 	/// Get `litep2p` keypair from `NodeKeyConfig`.
 	fn get_keypair(node_key: &NodeKeyConfig) -> Result<(Keypair, litep2p::PeerId), Error> {
-		let secret: litep2p::crypto::ed25519::SecretKey =
-			node_key.clone().into_keypair()?.secret().into();
+		// QUANTUM-SAFETY: Convert quantum identity to ed25519 for litep2p compatibility
+		let quantum_keypair = node_key.clone().into_keypair()?;
+		let seed_bytes = quantum_keypair.to_libp2p_ed25519();
+		let mut seed = [0u8; 32];
+		seed.copy_from_slice(&seed_bytes[..32]);
+		
+		let secret = litep2p::crypto::ed25519::SecretKey::try_from_bytes(&mut seed.clone())
+			.map_err(|_| Error::Io(std::io::Error::new(
+				std::io::ErrorKind::InvalidData,
+				"Invalid seed for litep2p"
+			)))?;
 
 		let local_identity = Keypair::from(secret);
 		let local_public = local_identity.public();

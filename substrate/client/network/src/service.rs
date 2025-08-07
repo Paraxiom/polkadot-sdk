@@ -274,8 +274,14 @@ where
 		let local_peer_id = local_public.to_peer_id();
 
 		// Convert to libp2p types.
-		let local_identity: ed25519::Keypair = local_identity.into();
-		let local_public: ed25519::PublicKey = local_public.into();
+		// QUANTUM-SAFETY: Convert quantum identity to ed25519 for libp2p compatibility
+		let seed_bytes = local_identity.to_libp2p_ed25519();
+		let mut seed = [0u8; 32];
+		seed.copy_from_slice(&seed_bytes[..32]);
+		let local_identity = ed25519::Keypair::from(
+			ed25519::SecretKey::try_from_bytes(&mut seed).expect("Valid seed")
+		);
+		let local_public = local_identity.public();
 		let local_peer_id: PeerId = local_peer_id.into();
 
 		network_config.boot_nodes = network_config

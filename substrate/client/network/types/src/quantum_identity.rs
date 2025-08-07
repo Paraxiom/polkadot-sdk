@@ -160,3 +160,60 @@ impl fmt::Debug for SecretKey {
 
 /// Signature type (for compatibility)
 pub type Signature = sphincs::Signature;
+
+// We need to implement conversion to libp2p types through the libp2p crate itself
+// Since service.rs uses libp2p::identity::ed25519, we can't directly implement From traits
+// Instead, we'll provide conversion methods
+
+impl Keypair {
+	/// Convert to libp2p-compatible ed25519 keypair
+	/// This is for network layer compatibility only
+	pub fn to_libp2p_ed25519(&self) -> Vec<u8> {
+		// Return the seed bytes that can be used to construct libp2p::identity::ed25519::Keypair
+		// Use the public key to generate a deterministic seed
+		let public_key = self.0.public();
+		let public_bytes = public_key.as_ref();
+		let seed = hashing::blake2_256(public_bytes);
+		seed.to_vec()
+	}
+}
+
+impl PublicKey {
+	/// Convert to libp2p-compatible ed25519 public key bytes
+	pub fn to_libp2p_ed25519_bytes(&self) -> [u8; 32] {
+		// Generate deterministic ed25519 public key from quantum public key
+		let seed = hashing::blake2_256(self.0.as_ref());
+		seed
+	}
+}
+
+impl SecretKey {
+	/// Convert to libp2p-compatible ed25519 secret key bytes
+	pub fn to_libp2p_ed25519_bytes(&self) -> [u8; 32] {
+		let mut bytes = [0u8; 32];
+		bytes.copy_from_slice(&self.inner[..32]);
+		bytes
+	}
+}
+
+// Conversion traits for litep2p compatibility
+#[cfg(feature = "std")]
+mod litep2p_compat {
+	use super::*;
+	use litep2p::crypto::ed25519 as litep2p_ed25519;
+	
+	impl From<SecretKey> for litep2p_ed25519::SecretKey {
+		fn from(sk: SecretKey) -> Self {
+			// Use first 32 bytes as ed25519 secret
+			let mut bytes = [0u8; 32];
+			bytes.copy_from_slice(&sk.inner[..32]);
+			litep2p_ed25519::SecretKey::try_from_bytes(&mut bytes.clone()).unwrap()
+		}
+	}
+}
+
+// Export conversions when std is available
+#[cfg(feature = "std")]
+pub use libp2p_compat::*;
+#[cfg(feature = "std")]
+pub use litep2p_compat::*;
