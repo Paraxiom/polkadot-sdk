@@ -60,7 +60,8 @@ pub const KEY_TYPE: sp_core::crypto::KeyTypeId = sp_application_crypto::key_type
 // These are stub types to maintain compilation during migration
 
 /// Stub public key type for BABE migration
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Encode, Decode, TypeInfo)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Encode, Decode, TypeInfo, MaxEncodedLen)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct BabePublicStub([u8; 32]);
 
 /// Stub signature type for BABE migration  
@@ -89,6 +90,16 @@ impl sp_application_crypto::RuntimeAppPublic for BabePublicStub {
 	fn to_raw_vec(&self) -> Vec<u8> { self.0.to_vec() }
 	fn generate_proof_of_possession(&mut self) -> Option<Self::Signature> { None }
 	fn verify_proof_of_possession(&self, _: &Self::Signature) -> bool { false }
+}
+
+impl BabePublicStub {
+	/// Get inner reference - stub
+	pub fn as_inner_ref(&self) -> &[u8; 32] { &self.0 }
+	
+	/// Make bytes - stub for VRF
+	pub fn make_bytes(&self, _: &[u8], _: &VrfTranscript, _: &VrfPreOutput) -> Option<[u8; 32]> {
+		Some([0u8; 32])
+	}
 }
 
 /// VRF context used for per-slot randomness generation.

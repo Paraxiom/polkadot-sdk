@@ -43,9 +43,14 @@ pub const RUNTIME_LOG_TARGET: &str = "runtime::grandpa";
 pub const KEY_TYPE: sp_core::crypto::KeyTypeId = sp_application_crypto::key_types::GRANDPA;
 
 // Use SPHINCS+ for quantum-safety with application crypto wrappers
-pub type AuthorityPair = sp_core::sphincs::Pair;
-pub type AuthorityId = sp_core::sphincs::Public;
-pub type AuthoritySignature = sp_core::sphincs::Signature;
+mod app {
+	use sp_application_crypto::{app_crypto, key_types::GRANDPA, sphincs};
+	app_crypto!(sphincs, GRANDPA);
+}
+
+pub type AuthorityPair = app::Pair;
+pub type AuthorityId = app::Public;
+pub type AuthoritySignature = app::Signature;
 
 /// The `ConsensusEngineId` of GRANDPA.
 pub const GRANDPA_ENGINE_ID: ConsensusEngineId = *b"FRNK";

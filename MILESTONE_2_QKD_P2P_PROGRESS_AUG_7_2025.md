@@ -100,18 +100,19 @@ Building a working P2P overlay with integrated QKD key exchange, including:
 6. Build test harness with simulated QKD
 
 ### 🎉 Today's Achievements (Aug 7)
-1. **Fixed sc-network compilation** 
+1. **Fixed sc-network compilation** ✅
    - Created quantum_identity module with SPHINCS+
    - Added libp2p/litep2p compatibility layers
    - Network layer now quantum-safe
 
-2. **Fixed sp-mixnet compilation**
+2. **Fixed sp-mixnet compilation** ✅
    - Replaced bandersnatch with SPHINCS+
    
-3. **Partially fixed sp-statement-store**
+3. **Fixed sp-statement-store compilation** ✅
    - Replaced all classical crypto imports
    - Stubbed ECIES functions (not quantum-safe)
-   - Hit signature size mismatch issues
+   - Stubbed signing/verification (signatures too large)
+   - Identified HTM context switching as the solution
 
 4. **Documentation**
    - Created QUANTUM_ARCHITECTURE_COMPLETE_VISION.md
