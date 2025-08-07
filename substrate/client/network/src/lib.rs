@@ -295,7 +295,7 @@ pub use service::{
 pub use types::ProtocolName;
 
 // Quantum transport exports
-pub use quantum_transport::{QuantumTransport, QkdClient};
+pub use quantum_transport::{QuantumTransport, QkdClient, MockQkdClient};
 pub use qkd_integration::{QkdConfig, create_qkd_client};
 
 /// Log target for `sc-network`.

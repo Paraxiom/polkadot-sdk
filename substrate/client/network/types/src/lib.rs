@@ -16,9 +16,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// QUANTUM-SAFETY: Re-export ed25519 for network compatibility only
-// This is needed for p2p networking compatibility with existing networks
-pub mod ed25519;
+// QUANTUM-SAFETY: ed25519 replaced with quantum-safe identity
+// This provides a compatibility layer using SPHINCS+ for network identity
+// Real P2P communication uses QuantumTransport with QKD integration
+pub mod quantum_identity;
+pub use quantum_identity as ed25519; // Compatibility alias
 pub mod kad;
 pub mod multiaddr;
 pub mod multihash;

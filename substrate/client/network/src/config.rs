@@ -358,7 +358,7 @@ impl NodeKeyConfig {
 						None
 					}
 				}) {
-					Some(s) => ed25519::SecretKey::try_from_bytes(s),
+					Some(s) => ed25519::SecretKey::try_from_bytes(&s),
 					_ => ed25519::SecretKey::try_from_bytes(&mut b),
 				},
 				ed25519::SecretKey::generate,
