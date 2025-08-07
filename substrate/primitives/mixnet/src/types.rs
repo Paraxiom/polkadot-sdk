@@ -22,8 +22,9 @@ use codec::{Decode, Encode};
 use scale_info::TypeInfo;
 
 mod app {
-	use sp_application_crypto::{app_crypto, key_types::MIXNET, bandersnatch};
-	app_crypto!(bandersnatch, MIXNET);
+	// QUANTUM-SAFETY: Replace bandersnatch with SPHINCS+ for mixnet
+	use sp_application_crypto::{app_crypto, key_types::MIXNET, sphincs};
+	app_crypto!(sphincs, MIXNET);
 }
 
 /// Authority public session key, used to verify registration signatures.
