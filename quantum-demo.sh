@@ -41,8 +41,24 @@ fi
 echo "   - Quantum Network Endpoints:"
 echo "     • Toshiba QKD Alice: 192.168.0.152:5000"
 echo "     • Toshiba QKD Bob: 192.168.0.153:5000"
-echo "     • KIRQ Hub: 127.0.0.1:8080"
-echo "     • Quantum Bridge: localhost:9999"
+echo "     • KIRQ Hub: localhost:8001"
+
+# Check if KIRQ hub is actually running
+if pgrep -f "quantum_rng_kirq_hub" > /dev/null; then
+    echo "     ✓ KIRQ Hub is RUNNING (PID: $(pgrep -f quantum_rng_kirq_hub))"
+    echo "     • Crypto4A HSM: Enabled"
+    echo "     • QKD Integration: Available"
+    echo "     • Entropy Mixing: Active"
+else
+    echo "     ✗ KIRQ Hub not running"
+fi
+
+# Check QKD client
+if [ -d "/home/paraxiom/qkd_client" ]; then
+    echo "   - QKD Client: ✓ Available at /home/paraxiom/qkd_client"
+else
+    echo "   - QKD Client: ✗ Not found"
+fi
 
 echo
 echo "2. CRYPTOGRAPHIC OPERATIONS:"

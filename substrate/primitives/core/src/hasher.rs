@@ -141,8 +141,8 @@ pub mod quantum {
 				let endpoints = [
 					"192.168.0.152:5000", // Toshiba Alice
 					"192.168.0.153:5000", // Toshiba Bob
-					"127.0.0.1:8080",     // KIRQ Hub
-					"localhost:9999",     // Quantum Bridge
+					"127.0.0.1:8001",     // KIRQ Hub (actual port)
+					"localhost:8001",     // KIRQ Hub alternative
 				];
 				
 				for endpoint in &endpoints {
