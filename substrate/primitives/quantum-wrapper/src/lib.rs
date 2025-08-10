@@ -25,8 +25,16 @@ impl QuantumHasher {
     
     /// Check if quantum resources are available
     fn quantum_available() -> bool {
-        // TODO: Check for QKD hardware, entropy levels, etc.
-        // For now, return false to use fallback
+        #[cfg(feature = "std")]
+        {
+            // Reuse the implementation from hasher
+            use sp_core::Hasher;
+            // Check env variable as simple test
+            std::env::var("QUANTUM_MODE").unwrap_or_default() == "1" ||
+            std::env::var("ENABLE_QUANTUM").unwrap_or_default() == "true"
+        }
+        
+        #[cfg(not(feature = "std"))]
         false
     }
     

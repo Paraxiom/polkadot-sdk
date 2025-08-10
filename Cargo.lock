@@ -13385,6 +13385,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-symmetric-proof"
+version = "0.1.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core 28.0.0",
+ "sp-io",
+ "sp-proof-storage",
+ "sp-quantum-wrapper",
+ "sp-runtime",
+ "sp-stark-crypto",
+ "sp-std 14.0.0",
+]
+
+[[package]]
 name = "pallet-template"
 version = "0.0.0"
 dependencies = [
@@ -22800,6 +22818,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sp-proof-storage"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core 28.0.0",
+ "sp-runtime",
+ "sp-std 14.0.0",
+]
+
+[[package]]
 name = "sp-quantum-wrapper"
 version = "1.0.0"
 dependencies = [
@@ -22983,6 +23012,22 @@ dependencies = [
  "serde",
  "sp-core 28.0.0",
  "sp-runtime",
+]
+
+[[package]]
+name = "sp-stark-crypto"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "chacha20poly1305",
+ "parity-scale-codec",
+ "scale-info",
+ "sha3",
+ "sp-core 28.0.0",
+ "sp-quantum-wrapper",
+ "sp-runtime",
+ "sp-std 14.0.0",
+ "winterfell",
 ]
 
 [[package]]
@@ -27337,6 +27382,94 @@ checksum = "524e57b2c537c0f9b1e69f1965311ec12182b4122e45035b1508cd24d2adadb1"
 dependencies = [
  "cfg-if",
  "windows-sys 0.48.0",
+]
+
+[[package]]
+name = "winter-air"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de512b0b63764cfe8c0bf4372e7ac7571f8bca0bb780091cdcbecd1fb320e436"
+dependencies = [
+ "libm",
+ "winter-crypto",
+ "winter-fri",
+ "winter-math",
+ "winter-utils",
+]
+
+[[package]]
+name = "winter-crypto"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d832015262e7d8ce6c160d3c8eb52e3a1c1352a7760523a25c4094c5d250cb9"
+dependencies = [
+ "blake3",
+ "sha3",
+ "winter-math",
+ "winter-utils",
+]
+
+[[package]]
+name = "winter-fri"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d3769f453f00738ba761ce94b63e7fc5a08903ab1d8c3e2a27c46d4327290cd0"
+dependencies = [
+ "winter-crypto",
+ "winter-math",
+ "winter-utils",
+]
+
+[[package]]
+name = "winter-math"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9f51c43e0756c89607b74a2da621ca472306bfb1ecc352a44a97dfe73cd0503d"
+dependencies = [
+ "winter-utils",
+]
+
+[[package]]
+name = "winter-prover"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9dd3744a539c4b9f92ba43123a5eed5b0f6402204f92c6a3187de30189693e7b"
+dependencies = [
+ "log",
+ "winter-air",
+ "winter-crypto",
+ "winter-fri",
+ "winter-math",
+ "winter-utils",
+]
+
+[[package]]
+name = "winter-utils"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e58f2e14e2223fdc75146ba65bdac6e27a4f820029ec2d6a183e6fba033622e9"
+
+[[package]]
+name = "winter-verifier"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "03738ecd0054879ad1ffd3fc4609fd700f1a6612d01ccbab84911bc9693623e3"
+dependencies = [
+ "winter-air",
+ "winter-crypto",
+ "winter-fri",
+ "winter-math",
+ "winter-utils",
+]
+
+[[package]]
+name = "winterfell"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1bf5a3f3c9dea647dfe66224d6564dc5333de341c197b8a7e24c1bdb8de5d21d"
+dependencies = [
+ "winter-prover",
+ "winter-verifier",
 ]
 
 [[package]]
