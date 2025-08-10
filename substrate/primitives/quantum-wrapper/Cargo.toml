@@ -1,0 +1,29 @@
+[package]
+name = "sp-quantum-wrapper"
+version = "1.0.0"
+authors = ["QuantumVerse Protocols"]
+edition = "2021"
+license = "Apache-2.0"
+description = "Quantum wrapper for crypto operations with PQC/QKD support and fallback"
+
+[dependencies]
+sp-core = { path = "../core", default-features = false }
+sp-runtime = { path = "../runtime", default-features = false }
+sp-std = { path = "../std", default-features = false }
+codec = { package = "parity-scale-codec", version = "3.6", default-features = false }
+
+# Post-quantum crypto
+pqcrypto-sphincsplus = { version = "0.7", default-features = false, optional = true }
+pqcrypto-falcon = { version = "0.2", default-features = false, optional = true }
+
+[features]
+default = ["std"]
+std = [
+    "sp-core/std",
+    "sp-runtime/std", 
+    "sp-std/std",
+    "codec/std",
+    "pqcrypto-sphincsplus?/std",
+    "pqcrypto-falcon?/std",
+]
+quantum = ["pqcrypto-sphincsplus", "pqcrypto-falcon"]

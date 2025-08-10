@@ -1,0 +1,58 @@
+[package]
+name = "pallet-quantum-crypto"
+version = "1.0.0"
+authors = ["QuantumVerse Protocols"]
+edition = "2021"
+license = "Apache-2.0"
+description = "Quantum-safe cryptography pallet implementing post-quantum signatures and QKD integration"
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "3.6", default-features = false, features = ["derive"] }
+scale-info = { version = "2.11", default-features = false, features = ["derive"] }
+frame-support = { path = "../../../substrate/frame/support", default-features = false }
+frame-system = { path = "../../../substrate/frame/system", default-features = false }
+sp-runtime = { path = "../../../substrate/primitives/runtime", default-features = false }
+sp-std = { path = "../../../substrate/primitives/std", default-features = false }
+sp-core = { path = "../../../substrate/primitives/core", default-features = false }
+sp-io = { path = "../../../substrate/primitives/io", default-features = false }
+
+# Quantum crypto dependencies
+sphincs-plus = { version = "0.7", default-features = false }
+falcon = { version = "2.0", default-features = false }
+sha3 = { version = "0.10", default-features = false }
+
+# Optional dependencies
+serde = { version = "1.0", default-features = false, features = ["derive"], optional = true }
+hex = { version = "0.4", default-features = false, optional = true }
+
+[dev-dependencies]
+sp-core = { path = "../../../substrate/primitives/core" }
+sp-io = { path = "../../../substrate/primitives/io" }
+pallet-balances = { path = "../../../substrate/frame/balances" }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "scale-info/std",
+    "frame-support/std",
+    "frame-system/std",
+    "sp-runtime/std",
+    "sp-std/std",
+    "sp-core/std",
+    "sp-io/std",
+    "sphincs-plus/std",
+    "falcon/std",
+    "sha3/std",
+    "serde/std",
+    "hex/std",
+]
+runtime-benchmarks = [
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
+    "sp-runtime/runtime-benchmarks",
+]
+try-runtime = [
+    "frame-support/try-runtime",
+    "frame-system/try-runtime",
+]

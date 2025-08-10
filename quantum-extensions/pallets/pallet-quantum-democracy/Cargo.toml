@@ -1,0 +1,51 @@
+[package]
+name = "pallet-quantum-democracy"
+version = "1.0.0"
+authors = ["QuantumVerse Protocols"]
+edition = "2021"
+license = "Apache-2.0"
+description = "Quantum democracy pallet for hardware-based governance without staking"
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "3.6", default-features = false, features = ["derive"] }
+scale-info = { version = "2.11", default-features = false, features = ["derive"] }
+frame-support = { path = "../../../substrate/frame/support", default-features = false }
+frame-system = { path = "../../../substrate/frame/system", default-features = false }
+sp-runtime = { path = "../../../substrate/primitives/runtime", default-features = false }
+sp-std = { path = "../../../substrate/primitives/std", default-features = false }
+sp-core = { path = "../../../substrate/primitives/core", default-features = false }
+sp-io = { path = "../../../substrate/primitives/io", default-features = false }
+
+# Quantum extensions
+pallet-qkd-network = { path = "../pallet-qkd-network", default-features = false }
+pallet-quantum-crypto = { path = "../pallet-quantum-crypto", default-features = false }
+
+# For anonymous credentials
+bulletproofs = { version = "4", default-features = false, optional = true }
+curve25519-dalek = { version = "4", default-features = false, optional = true }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "scale-info/std",
+    "frame-support/std",
+    "frame-system/std",
+    "sp-runtime/std",
+    "sp-std/std",
+    "sp-core/std",
+    "sp-io/std",
+    "pallet-qkd-network/std",
+    "pallet-quantum-crypto/std",
+    "bulletproofs?/std",
+    "curve25519-dalek?/std",
+]
+runtime-benchmarks = [
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
+]
+try-runtime = [
+    "frame-support/try-runtime",
+    "frame-system/try-runtime",
+]
+anonymous-voting = ["bulletproofs", "curve25519-dalek"]

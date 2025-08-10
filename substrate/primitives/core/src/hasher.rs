@@ -56,3 +56,40 @@ pub mod keccak {
 		}
 	}
 }
+
+pub mod quantum {
+	use crate::hash::H256;
+	use hash256_std_hasher::Hash256StdHasher;
+	use hash_db::Hasher;
+
+	/// Quantum-aware hasher that uses PQC/QKD when available, falls back to Blake2
+	#[derive(Debug)]
+	pub struct QuantumHasher;
+
+	impl Hasher for QuantumHasher {
+		type Out = H256;
+		type StdHasher = Hash256StdHasher;
+		const LENGTH: usize = 32;
+
+		fn hash(x: &[u8]) -> Self::Out {
+			// Check if quantum resources are available
+			if Self::quantum_available() {
+				// Use quantum-safe hashing (SHA3/Keccak is quantum-resistant)
+				sp_crypto_hashing::keccak_256(x).into()
+			} else {
+				// Fallback to Blake2
+				sp_crypto_hashing::blake2_256(x).into()
+			}
+		}
+	}
+
+	impl QuantumHasher {
+		/// Check if quantum resources (QKD hardware, entropy) are available
+		fn quantum_available() -> bool {
+			// TODO: Check for QKD hardware presence
+			// TODO: Check entropy levels
+			// For now, return false to use fallback
+			false
+		}
+	}
+}

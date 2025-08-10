@@ -91,6 +91,8 @@ pub use quantum_signature::{QuantumSignature, QuantumPublic, QuantumSigner};
 pub use self::hasher::blake2::Blake2Hasher;
 #[cfg(not(substrate_runtime))]
 pub use self::hasher::keccak::KeccakHasher;
+#[cfg(not(substrate_runtime))]
+pub use self::hasher::quantum::QuantumHasher;
 pub use hash_db::Hasher;
 
 pub use bounded_collections as bounded;
