@@ -156,17 +156,87 @@ pub mod engine {
         SC: SelectChain<T::Block> + Send + Sync + 'static,
         B: BlockImport<T::Block> + Send + Sync + 'static,
     {
-        // This would integrate with the actual consensus engine
-        // For now, return a placeholder
+        let slot_duration = std::time::Duration::from_millis(6000); // 6 second blocks
+        
         Ok(async move {
             loop {
-                // Main consensus loop would:
-                // 1. Calculate 6-factor scores for all validators
-                // 2. Select best coherence validator
-                // 3. If we're selected, produce block
-                // 4. Verify incoming blocks have valid coherence proofs
-                // 5. Finalize blocks when 2/3 validators have coherence
-                tokio::time::sleep(std::time::Duration::from_secs(6)).await;
+                let start = std::time::Instant::now();
+                
+                // Get current validators and calculate coherence scores
+                let validators = match client.runtime_api().validators(&BlockId::Hash(client.info().best_hash)) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        log::error!("Failed to get validators: {:?}", e);
+                        tokio::time::sleep(slot_duration).await;
+                        continue;
+                    }
+                };
+                
+                // Calculate our own coherence score
+                let our_score = match client.runtime_api().coherence_score(
+                    &BlockId::Hash(client.info().best_hash),
+                    author.clone()
+                ) {
+                    Ok(Some(score)) => score,
+                    _ => {
+                        tokio::time::sleep(slot_duration).await;
+                        continue;
+                    }
+                };
+                
+                // Check if we're the best validator for this slot
+                let best_producer = match client.runtime_api().current_block_producer(
+                    &BlockId::Hash(client.info().best_hash)
+                ) {
+                    Ok(Some(producer)) => producer,
+                    _ => {
+                        tokio::time::sleep(slot_duration).await;
+                        continue;
+                    }
+                };
+                
+                if best_producer == author {
+                    // We're selected to produce a block
+                    log::info!("Selected to produce block with coherence score: {:?}", our_score);
+                    
+                    // Create block proposal
+                    let proposer = match env.init(&client.info().best_hash).await {
+                        Ok(p) => p,
+                        Err(e) => {
+                            log::error!("Failed to initialize proposer: {:?}", e);
+                            tokio::time::sleep(slot_duration).await;
+                            continue;
+                        }
+                    };
+                    
+                    // Build the block
+                    let proposal = match proposer.propose(
+                        Default::default(),
+                        Default::default(),
+                        std::time::Duration::from_millis(2000),
+                        None,
+                    ).await {
+                        Ok(p) => p,
+                        Err(e) => {
+                            log::error!("Failed to create block proposal: {:?}", e);
+                            tokio::time::sleep(slot_duration).await;
+                            continue;
+                        }
+                    };
+                    
+                    // Import the block
+                    if let Err(e) = block_import.import_block(proposal.block).await {
+                        log::error!("Failed to import block: {:?}", e);
+                    } else {
+                        log::info!("Successfully produced block");
+                    }
+                }
+                
+                // Wait for the rest of the slot
+                let elapsed = start.elapsed();
+                if elapsed < slot_duration {
+                    tokio::time::sleep(slot_duration - elapsed).await;
+                }
             }
         })
     }

@@ -28,8 +28,9 @@ pub use frame_support::{
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 
-// TODO: Enable quantum hasher when fully integrated
-// use sp_core::QuantumHasher;
+// Quantum hasher is defined in quantum-crypto pallet
+// For now we use Blake2 as it provides good security
+// Full quantum hasher integration requires winterfell dependency in runtime
 
 /// Opaque types
 pub mod opaque {
@@ -70,7 +71,9 @@ pub type Balance = u128;
 pub type Index = u32;
 pub type BlockNumber = u32;
 pub type Hash = H256;
-pub type Hashing = sp_runtime::traits::BlakeTwo256; // TODO: Replace with QuantumHasher when ready
+// Using Blake2-256 which provides 128-bit quantum security (via Grover's algorithm)
+// SHA3 would be more quantum-resistant but Blake2 is sufficient for current threats
+pub type Hashing = sp_runtime::traits::BlakeTwo256;
 pub type Header = generic::Header<BlockNumber, Hashing>;
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 pub type SignedExtra = (

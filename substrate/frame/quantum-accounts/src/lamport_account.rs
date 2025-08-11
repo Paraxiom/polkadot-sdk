@@ -140,9 +140,7 @@ impl<T: Config> Pallet<T> {
             Error::<T>::KeyMismatch
         );
         
-        // TODO: Verify Lamport signature properly
-        // The LamportSignature struct has private fields, so we can't construct it directly
-        // For MVP, we'll verify the signature size and structure
+        // Verify signature sizes
         ensure!(
             signature.signature.len() == 8192, // LAMPORT_SIGNATURE_SIZE
             Error::<T>::InvalidQuantumSignature
@@ -152,9 +150,14 @@ impl<T: Config> Pallet<T> {
             Error::<T>::InvalidQuantumSignature
         );
         
-        // In production, this would call the actual Lamport verification
-        // For now, we assume the signature is valid if the sizes are correct
-        let verified = true;
+        // Verify the Lamport signature using the verification function from quantum-crypto
+        let verified = pallet_quantum_crypto::double_ratchet_lamport::verify_lamport_signature(
+            message,
+            &signature.signature,
+            &signature.public_key,
+        );
+        
+        ensure!(verified, Error::<T>::InvalidQuantumSignature);
         
         // Increment usage counter
         crate::LamportAccounts::<T>::mutate(account, |maybe_account| {

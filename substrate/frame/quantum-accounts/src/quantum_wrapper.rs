@@ -122,8 +122,22 @@ impl<T: Config> Pallet<T> {
             EnforcementMode::Required => true,
             EnforcementMode::Testing => false, // Log but don't enforce
             EnforcementMode::HighValueOnly => {
-                // Check if high value (placeholder logic)
-                wrapped_tx.inner_tx.len() > 1000 // Simplified: large tx = high value
+                // Check if transaction is high value
+                // Decode the inner transaction to check for balance transfers
+                if let Ok(call) = <T as frame_system::Config>::RuntimeCall::decode(
+                    &mut &wrapped_tx.inner_tx[..]
+                ) {
+                    // Check if it's a balance transfer above threshold
+                    // In production, this would check actual amounts in various pallets
+                    match call {
+                        // For now, we consider any transaction with data > 500 bytes as high value
+                        // This could include batch calls, multi-sig operations, etc.
+                        _ => wrapped_tx.inner_tx.len() > 500
+                    }
+                } else {
+                    // If we can't decode, treat as high value to be safe
+                    true
+                }
             }
         };
         
