@@ -26,6 +26,10 @@ winter-utils = { version = "0.9", default-features = false }
 
 # Crypto
 sha3 = { version = "0.10", default-features = false }
+# Post-quantum cryptography
+pqcrypto-sphincsplus = { version = "0.7", optional = true, default-features = false }
+pqcrypto-falcon = { version = "0.3", optional = true, default-features = false }
+pqcrypto-traits = { version = "0.3", optional = true, default-features = false }
 # rand_chacha removed - we use quantum RNG from KIRQ
 
 # Logging
@@ -57,7 +61,11 @@ std = [
     "sha3/std",
     "log/std",
     "serde_json",
+    "pqcrypto-sphincsplus?/std",
+    "pqcrypto-falcon?/std",
+    "pqcrypto-traits?/std",
 ]
+full_crypto = ["pqcrypto-sphincsplus", "pqcrypto-falcon", "pqcrypto-traits"]
 runtime-benchmarks = [
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",

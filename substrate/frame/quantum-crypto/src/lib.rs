@@ -21,6 +21,7 @@ mod quantum_vrf;
 #[cfg(feature = "std")]
 mod quantum_event_submitter;
 mod authorized_reporter;
+pub mod pqc_signatures;
 
 use qber_stark::{QberStark, QberProof, QberPublicInputs};
 pub use quantum_merkle::{QuantumMerkleTree, QuantumMerkleProof, QuantumStateTree};
