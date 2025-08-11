@@ -248,10 +248,10 @@ impl Statement {
 		use sp_core::hashing::blake2_256;
 		
 		// Generate signature hash as proof
-		let sig_hash = blake2_256(&[&self.to_bytes()[..], key.as_ref()].concat());
+		let sig_hash = blake2_256(&[&self.signature_material()[..], key.as_ref()].concat());
 		
 		// Store first 64 bytes as proof field
-		if let Some(proof) = self.proof_mut() {
+		if let Some(proof) = &mut self.proof {
 			proof[..32].copy_from_slice(&sig_hash);
 			// Store key identifier in remaining bytes
 			proof[32..64].copy_from_slice(&key.as_ref()[..32]);
@@ -269,16 +269,20 @@ impl Statement {
 		use sp_core::{Pair, hashing::blake2_256};
 		
 		// Sign the statement
-		let signature = key.sign(&self.to_bytes());
+		let signature = key.sign(&self.signature_material());
 		
 		// Compress 8KB signature to 64-byte proof
 		let sig_bytes = signature.as_ref();
 		let sig_hash = blake2_256(&sig_bytes[..sig_bytes.len().min(8192)]);
 		
 		// Set proof field with compressed signature
-		let mut proof = [0u8; 64];
-		proof[..32].copy_from_slice(&sig_hash);
-		proof[32..64].copy_from_slice(&key.public().as_ref()[..32]);
+		let mut proof = Proof::OnChain { 
+			signature: [0u8; 64] 
+		};
+		if let Proof::OnChain { ref mut signature } = proof {
+			signature[..32].copy_from_slice(&sig_hash);
+			signature[32..64].copy_from_slice(&key.public().as_ref()[..32]);
+		}
 		self.set_proof(proof);
 	}
 
@@ -292,15 +296,19 @@ impl Statement {
 		use sp_core::hashing::blake2_256;
 		
 		// Generate quantum-safe proof from ed25519 key
-		let proof_data = blake2_256(&[&self.to_bytes()[..], key.as_ref()].concat());
+		let proof_data = blake2_256(&[&self.signature_material()[..], key.as_ref()].concat());
 		
-		if let Some(proof) = self.proof_mut() {
-			proof[..32].copy_from_slice(&proof_data);
-			proof[32..64].copy_from_slice(&key.as_ref()[..32]);
-			true
-		} else {
-			false
-		}
+		// Create Ed25519 proof with proof data
+		let mut signature = [0u8; 64];
+		signature[..32].copy_from_slice(&proof_data);
+		signature[32..64].copy_from_slice(&proof_data);
+		
+		let proof = Proof::Ed25519 {
+			signature,
+			signer: key.as_ref()[..32].try_into().unwrap(),
+		};
+		self.set_proof(proof);
+		true
 	}
 
 	/// Sign with a given private key and add the signature proof field.
