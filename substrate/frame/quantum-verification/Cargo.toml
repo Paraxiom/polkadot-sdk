@@ -1,5 +1,5 @@
 [package]
-name = "pallet-proof-of-coherence"
+name = "pallet-quantum-verification"
 version = "1.0.0"
 authors.workspace = true
 edition.workspace = true
@@ -9,7 +9,6 @@ repository.workspace = true
 [dependencies]
 codec = { workspace = true, features = ["derive"] }
 scale-info = { workspace = true, features = ["derive"] }
-serde = { workspace = true, features = ["derive"], optional = true }
 
 # Substrate
 frame-support = { workspace = true }
@@ -19,22 +18,24 @@ sp-std = { workspace = true }
 sp-core = { workspace = true }
 sp-io = { workspace = true }
 
-# Quantum
-pallet-quantum-crypto = { path = "../quantum-crypto", default-features = false }
+# Quantum pallets
+pallet-quantum-crypto = { workspace = true }
+pallet-proof-of-coherence = { workspace = true }
 
-# Consensus (using sp-runtime instead)
+# Statistical analysis
+nalgebra = { version = "0.32", default-features = false }
+statistical = { version = "1.0", default-features = false }
 
 [dev-dependencies]
 sp-core = { workspace = true }
 sp-io = { workspace = true }
-pallet-balances = { workspace = true }
+sp-runtime = { workspace = true }
 
 [features]
 default = ["std"]
 std = [
     "codec/std",
     "scale-info/std",
-    "serde",
     "frame-support/std",
     "frame-system/std",
     "sp-runtime/std",
@@ -42,6 +43,8 @@ std = [
     "sp-core/std",
     "sp-io/std",
     "pallet-quantum-crypto/std",
+    "pallet-proof-of-coherence/std",
+    "nalgebra/std",
 ]
 runtime-benchmarks = [
     "frame-support/runtime-benchmarks",

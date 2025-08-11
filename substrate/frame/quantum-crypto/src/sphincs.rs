@@ -40,30 +40,30 @@ impl sp_std::fmt::Debug for SphincsPlusSignature {
     }
 }
 
-/// Quantum signature that can be either classical or post-quantum
-#[derive(Clone, Encode, Decode, TypeInfo, Debug, PartialEq, Eq)]
+/// Quantum signature that can be either classical (stub) or post-quantum
+#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq)]
 pub enum QuantumSignature {
-    Ed25519(sp_core::ed25519::Signature),
-    Sr25519(sp_core::sr25519::Signature),
+    Ed25519(sp_runtime::quantum_stubs::ed25519::Signature),
+    Sr25519(sp_runtime::quantum_stubs::sr25519::Signature),
     SphincsPlus(SphincsPlusSignature),
 }
 
-/// Quantum public key that can be either classical or post-quantum
-#[derive(Clone, Encode, Decode, TypeInfo, Debug, PartialEq, Eq)]
+/// Quantum public key that can be either classical (stub) or post-quantum
+#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq)]
 pub enum QuantumPublic {
-    Ed25519(sp_core::ed25519::Public),
-    Sr25519(sp_core::sr25519::Public),
+    Ed25519(sp_runtime::quantum_stubs::ed25519::Public),
+    Sr25519(sp_runtime::quantum_stubs::sr25519::Public),
     SphincsPlus(SphincsPlusPublic),
 }
 
-impl From<sp_core::ed25519::Public> for QuantumPublic {
-    fn from(key: sp_core::ed25519::Public) -> Self {
+impl From<sp_runtime::quantum_stubs::ed25519::Public> for QuantumPublic {
+    fn from(key: sp_runtime::quantum_stubs::ed25519::Public) -> Self {
         QuantumPublic::Ed25519(key)
     }
 }
 
-impl From<sp_core::sr25519::Public> for QuantumPublic {
-    fn from(key: sp_core::sr25519::Public) -> Self {
+impl From<sp_runtime::quantum_stubs::sr25519::Public> for QuantumPublic {
+    fn from(key: sp_runtime::quantum_stubs::sr25519::Public) -> Self {
         QuantumPublic::Sr25519(key)
     }
 }
@@ -71,5 +71,25 @@ impl From<sp_core::sr25519::Public> for QuantumPublic {
 impl From<SphincsPlusPublic> for QuantumPublic {
     fn from(key: SphincsPlusPublic) -> Self {
         QuantumPublic::SphincsPlus(key)
+    }
+}
+
+impl sp_std::fmt::Debug for QuantumSignature {
+    fn fmt(&self, f: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
+        match self {
+            QuantumSignature::Ed25519(_) => write!(f, "QuantumSignature::Ed25519(stub)"),
+            QuantumSignature::Sr25519(_) => write!(f, "QuantumSignature::Sr25519(stub)"),
+            QuantumSignature::SphincsPlus(sig) => write!(f, "QuantumSignature::SphincsPlus({} bytes)", sig.0.len()),
+        }
+    }
+}
+
+impl sp_std::fmt::Debug for QuantumPublic {
+    fn fmt(&self, f: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
+        match self {
+            QuantumPublic::Ed25519(_) => write!(f, "QuantumPublic::Ed25519(stub)"),
+            QuantumPublic::Sr25519(_) => write!(f, "QuantumPublic::Sr25519(stub)"),
+            QuantumPublic::SphincsPlus(key) => write!(f, "QuantumPublic::SphincsPlus({:?})", &key.0[..8]),
+        }
     }
 }

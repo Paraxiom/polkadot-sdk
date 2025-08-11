@@ -11939,6 +11939,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-encrypted-payload"
+version = "1.0.0"
+dependencies = [
+ "chacha20poly1305",
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "pallet-quantum-crypto",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core 28.0.0",
+ "sp-io",
+ "sp-runtime",
+ "sp-std 14.0.0",
+]
+
+[[package]]
 name = "pallet-example-authorization-tx-extension"
 version = "1.0.0"
 dependencies = [
@@ -12678,20 +12695,16 @@ dependencies = [
 name = "pallet-proof-of-coherence"
 version = "1.0.0"
 dependencies = [
- "frame-benchmarking",
  "frame-support",
  "frame-system",
- "num-complex",
  "pallet-balances",
  "pallet-quantum-crypto",
- "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
  "serde",
  "sp-core 28.0.0",
  "sp-io",
  "sp-runtime",
- "sp-staking",
  "sp-std 14.0.0",
 ]
 
@@ -12707,20 +12720,56 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-quantum-accounts"
+version = "1.0.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "log",
+ "pallet-quantum-crypto",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core 28.0.0",
+ "sp-io",
+ "sp-runtime",
+ "sp-std 14.0.0",
+]
+
+[[package]]
+name = "pallet-quantum-aura"
+version = "1.0.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-quantum-crypto",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core 28.0.0",
+ "sp-io",
+ "sp-runtime",
+ "sp-std 14.0.0",
+]
+
+[[package]]
 name = "pallet-quantum-crypto"
 version = "1.0.0"
 dependencies = [
- "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "log",
  "parity-scale-codec",
- "rand_core 0.6.4",
  "scale-info",
+ "serde_json",
  "sha3",
  "sp-core 28.0.0",
  "sp-io",
  "sp-runtime",
  "sp-std 14.0.0",
+ "winter-crypto 0.9.0",
+ "winter-math 0.9.3",
+ "winter-utils 0.9.3",
+ "winterfell 0.9.0",
 ]
 
 [[package]]
@@ -17422,6 +17471,69 @@ dependencies = [
  "wasi 0.11.1+wasi-snapshot-preview1",
  "web-sys",
  "winapi",
+]
+
+[[package]]
+name = "quantum-node"
+version = "1.0.0"
+dependencies = [
+ "clap",
+ "frame-system",
+ "futures",
+ "log",
+ "pallet-quantum-crypto",
+ "pallet-transaction-payment",
+ "sc-cli",
+ "sc-client-api",
+ "sc-consensus",
+ "sc-executor",
+ "sc-network",
+ "sc-rpc-api",
+ "sc-service",
+ "sc-telemetry",
+ "sc-transaction-pool",
+ "sc-transaction-pool-api",
+ "serde_json",
+ "sp-api",
+ "sp-block-builder",
+ "sp-blockchain",
+ "sp-core 28.0.0",
+ "sp-inherents",
+ "sp-keyring",
+ "sp-quantum-wrapper",
+ "sp-runtime",
+ "sp-timestamp",
+ "ureq",
+]
+
+[[package]]
+name = "quantum-runtime"
+version = "1.0.0"
+dependencies = [
+ "frame-executive",
+ "frame-support",
+ "frame-system",
+ "frame-system-rpc-runtime-api",
+ "pallet-balances",
+ "pallet-encrypted-payload",
+ "pallet-proof-of-coherence",
+ "pallet-quantum-accounts",
+ "pallet-quantum-aura",
+ "pallet-quantum-crypto",
+ "pallet-timestamp",
+ "pallet-transaction-payment",
+ "pallet-transaction-payment-rpc-runtime-api",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-api",
+ "sp-block-builder",
+ "sp-core 28.0.0",
+ "sp-inherents",
+ "sp-quantum-wrapper",
+ "sp-runtime",
+ "sp-std 14.0.0",
+ "sp-transaction-pool",
+ "sp-version",
 ]
 
 [[package]]
@@ -23027,7 +23139,7 @@ dependencies = [
  "sp-quantum-wrapper",
  "sp-runtime",
  "sp-std 14.0.0",
- "winterfell",
+ "winterfell 0.7.1",
 ]
 
 [[package]]
@@ -25881,6 +25993,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
 
 [[package]]
+name = "ureq"
+version = "2.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02d1a66277ed75f640d608235660df48c8e3c19f3b4edb6a263315626cc3c01d"
+dependencies = [
+ "base64 0.22.1",
+ "flate2",
+ "log",
+ "once_cell",
+ "rustls 0.23.29",
+ "rustls-pki-types",
+ "url",
+ "webpki-roots 0.26.11",
+]
+
+[[package]]
 name = "url"
 version = "2.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -26688,6 +26816,15 @@ checksum = "5f20c57d8d7db6d3b86154206ae5d8fba62dd39573114de97c2cb0578251f8e1"
 
 [[package]]
 name = "webpki-roots"
+version = "0.26.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "521bc38abb08001b01866da9f51eb7c5d647a19260e00054a8c7fd5f9e57f7a9"
+dependencies = [
+ "webpki-roots 1.0.2",
+]
+
+[[package]]
+name = "webpki-roots"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7e8983c3ab33d6fb807cfcdad2491c4ea8cbc8ed839181c7dfd9c67c83e261b2"
@@ -27391,10 +27528,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "de512b0b63764cfe8c0bf4372e7ac7571f8bca0bb780091cdcbecd1fb320e436"
 dependencies = [
  "libm",
- "winter-crypto",
- "winter-fri",
- "winter-math",
- "winter-utils",
+ "winter-crypto 0.7.0",
+ "winter-fri 0.7.2",
+ "winter-math 0.7.1",
+ "winter-utils 0.7.4",
+]
+
+[[package]]
+name = "winter-air"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b72f12b88ebb060b52c0e9aece9bb64a9fc38daf7ba689dd5ce63271b456c883"
+dependencies = [
+ "libm",
+ "winter-crypto 0.9.0",
+ "winter-fri 0.9.0",
+ "winter-math 0.9.3",
+ "winter-utils 0.9.3",
 ]
 
 [[package]]
@@ -27405,8 +27555,20 @@ checksum = "9d832015262e7d8ce6c160d3c8eb52e3a1c1352a7760523a25c4094c5d250cb9"
 dependencies = [
  "blake3",
  "sha3",
- "winter-math",
- "winter-utils",
+ "winter-math 0.7.1",
+ "winter-utils 0.7.4",
+]
+
+[[package]]
+name = "winter-crypto"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "00fbb724d2d9fbfd3aa16ea27f5e461d4fe1d74b0c9e0ed1bf79e9e2a955f4d5"
+dependencies = [
+ "blake3",
+ "sha3",
+ "winter-math 0.9.3",
+ "winter-utils 0.9.3",
 ]
 
 [[package]]
@@ -27415,9 +27577,20 @@ version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3769f453f00738ba761ce94b63e7fc5a08903ab1d8c3e2a27c46d4327290cd0"
 dependencies = [
- "winter-crypto",
- "winter-math",
- "winter-utils",
+ "winter-crypto 0.7.0",
+ "winter-math 0.7.1",
+ "winter-utils 0.7.4",
+]
+
+[[package]]
+name = "winter-fri"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3ab6077cf4c23c0411f591f4ba29378e27f26acb8cef3c51cadd93daaf6080b3"
+dependencies = [
+ "winter-crypto 0.9.0",
+ "winter-math 0.9.3",
+ "winter-utils 0.9.3",
 ]
 
 [[package]]
@@ -27426,7 +27599,27 @@ version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f51c43e0756c89607b74a2da621ca472306bfb1ecc352a44a97dfe73cd0503d"
 dependencies = [
- "winter-utils",
+ "winter-utils 0.7.4",
+]
+
+[[package]]
+name = "winter-math"
+version = "0.9.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5b0e685b3b872d82e58a86519294a814b7bc7a4d3cd2c93570a7d80c0c5a1aba"
+dependencies = [
+ "winter-utils 0.9.3",
+]
+
+[[package]]
+name = "winter-maybe-async"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ce0f4161cdde50de809b3869c1cb083a09e92e949428ea28f04c0d64045875c"
+dependencies = [
+ "proc-macro2 1.0.95",
+ "quote 1.0.40",
+ "syn 2.0.104",
 ]
 
 [[package]]
@@ -27436,11 +27629,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9dd3744a539c4b9f92ba43123a5eed5b0f6402204f92c6a3187de30189693e7b"
 dependencies = [
  "log",
- "winter-air",
- "winter-crypto",
- "winter-fri",
- "winter-math",
- "winter-utils",
+ "winter-air 0.7.4",
+ "winter-crypto 0.7.0",
+ "winter-fri 0.7.2",
+ "winter-math 0.7.1",
+ "winter-utils 0.7.4",
+]
+
+[[package]]
+name = "winter-prover"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f17e3dbae97050f58e01ed4f12906e247841575a0518632e052941a1c37468df"
+dependencies = [
+ "tracing",
+ "winter-air 0.9.0",
+ "winter-crypto 0.9.0",
+ "winter-fri 0.9.0",
+ "winter-math 0.9.3",
+ "winter-maybe-async",
+ "winter-utils 0.9.3",
 ]
 
 [[package]]
@@ -27450,16 +27658,35 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e58f2e14e2223fdc75146ba65bdac6e27a4f820029ec2d6a183e6fba033622e9"
 
 [[package]]
+name = "winter-utils"
+version = "0.9.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "961e81e9388877a25db1c034ba38253de2055f569633ae6a665d857a0556391b"
+
+[[package]]
 name = "winter-verifier"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "03738ecd0054879ad1ffd3fc4609fd700f1a6612d01ccbab84911bc9693623e3"
 dependencies = [
- "winter-air",
- "winter-crypto",
- "winter-fri",
- "winter-math",
- "winter-utils",
+ "winter-air 0.7.4",
+ "winter-crypto 0.7.0",
+ "winter-fri 0.7.2",
+ "winter-math 0.7.1",
+ "winter-utils 0.7.4",
+]
+
+[[package]]
+name = "winter-verifier"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "324002ade90f21e85599d51a232a80781efc8cb46f511f8bc89f9c5a4eb9cb65"
+dependencies = [
+ "winter-air 0.9.0",
+ "winter-crypto 0.9.0",
+ "winter-fri 0.9.0",
+ "winter-math 0.9.3",
+ "winter-utils 0.9.3",
 ]
 
 [[package]]
@@ -27468,8 +27695,19 @@ version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1bf5a3f3c9dea647dfe66224d6564dc5333de341c197b8a7e24c1bdb8de5d21d"
 dependencies = [
- "winter-prover",
- "winter-verifier",
+ "winter-prover 0.7.1",
+ "winter-verifier 0.7.0",
+]
+
+[[package]]
+name = "winterfell"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "01151ac5fe2d783950743e8a110e0a2f26994f888b4cbe848699142cb3ea1e5b"
+dependencies = [
+ "winter-air 0.9.0",
+ "winter-prover 0.9.0",
+ "winter-verifier 0.9.0",
 ]
 
 [[package]]

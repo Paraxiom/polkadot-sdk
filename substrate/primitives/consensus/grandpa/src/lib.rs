@@ -466,9 +466,10 @@ where
 {
 	let encoded = localized_payload(round, set_id, &message);
 	let signature = keystore
-		.sphincs_sign(KEY_TYPE, &public, &encoded[..])
+		.sphincs_sign(KEY_TYPE, &public.into(), &encoded[..])
 		.ok()
-		.flatten()?;
+		.flatten()?
+		.into();
 
 	Some(finality_grandpa::SignedMessage { message, signature, id: public })
 }

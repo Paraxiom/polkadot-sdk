@@ -1,0 +1,70 @@
+[package]
+name = "quantum-runtime"
+version = "1.0.0"
+authors = ["Quantum Harmony Team"]
+edition = "2021"
+license = "GPL-3.0-only"
+
+[dependencies]
+# Core
+codec = { package = "parity-scale-codec", version = "3.6.12", default-features = false, features = ["derive"] }
+scale-info = { version = "2.11.1", default-features = false, features = ["derive"] }
+
+# Substrate
+sp-api = { path = "../../../primitives/api", default-features = false }
+sp-block-builder = { path = "../../../primitives/block-builder", default-features = false }
+sp-core = { path = "../../../primitives/core", default-features = false }
+sp-inherents = { path = "../../../primitives/inherents", default-features = false }
+sp-runtime = { path = "../../../primitives/runtime", default-features = false }
+sp-std = { path = "../../../primitives/std", default-features = false }
+sp-transaction-pool = { path = "../../../primitives/transaction-pool", default-features = false }
+sp-version = { path = "../../../primitives/version", default-features = false }
+
+# Frame
+frame-executive = { path = "../../../frame/executive", default-features = false }
+frame-support = { path = "../../../frame/support", default-features = false }
+frame-system = { path = "../../../frame/system", default-features = false }
+pallet-balances = { path = "../../../frame/balances", default-features = false }
+pallet-timestamp = { path = "../../../frame/timestamp", default-features = false }
+pallet-transaction-payment = { path = "../../../frame/transaction-payment", default-features = false }
+pallet-transaction-payment-rpc-runtime-api = { path = "../../../frame/transaction-payment/rpc/runtime-api", default-features = false }
+frame-system-rpc-runtime-api = { path = "../../../frame/system/rpc/runtime-api", default-features = false }
+
+# Quantum
+pallet-quantum-crypto = { path = "../../../frame/quantum-crypto", default-features = false }
+pallet-quantum-accounts = { path = "../../../frame/quantum-accounts", default-features = false }
+pallet-quantum-aura = { path = "../../../frame/quantum-aura", default-features = false }
+# pallet-quantum-verification = { path = "../../../frame/quantum-verification", default-features = false }
+pallet-encrypted-payload = { path = "../../../frame/encrypted-payload", default-features = false }
+pallet-proof-of-coherence = { path = "../../../frame/proof-of-coherence", default-features = false }
+sp-quantum-wrapper = { path = "../../../primitives/quantum-wrapper", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "scale-info/std",
+    "sp-api/std",
+    "sp-block-builder/std",
+    "sp-core/std",
+    "sp-inherents/std",
+    "sp-runtime/std",
+    "sp-std/std",
+    "sp-transaction-pool/std",
+    "sp-version/std",
+    "frame-executive/std",
+    "frame-support/std",
+    "frame-system/std",
+    "pallet-balances/std",
+    "pallet-timestamp/std",
+    "pallet-transaction-payment/std",
+    "pallet-transaction-payment-rpc-runtime-api/std",
+    "frame-system-rpc-runtime-api/std",
+    "pallet-quantum-crypto/std",
+    "pallet-quantum-accounts/std",
+    "pallet-quantum-aura/std",
+    # "pallet-quantum-verification/std",
+    "pallet-encrypted-payload/std",
+    "pallet-proof-of-coherence/std",
+    "sp-quantum-wrapper/std",
+]

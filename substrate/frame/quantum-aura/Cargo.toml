@@ -1,15 +1,15 @@
 [package]
-name = "pallet-proof-of-coherence"
+name = "pallet-quantum-aura"
 version = "1.0.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+description = "Post-quantum block production for Aura consensus"
 
 [dependencies]
 codec = { workspace = true, features = ["derive"] }
 scale-info = { workspace = true, features = ["derive"] }
-serde = { workspace = true, features = ["derive"], optional = true }
 
 # Substrate
 frame-support = { workspace = true }
@@ -18,29 +18,27 @@ sp-runtime = { workspace = true }
 sp-std = { workspace = true }
 sp-core = { workspace = true }
 sp-io = { workspace = true }
+# sp-consensus-aura = { workspace = true } # Removed - implementing quantum consensus
+# pallet-aura = { workspace = true } # Removed - quantum-aura replaces this
+pallet-timestamp = { workspace = true }
 
 # Quantum
 pallet-quantum-crypto = { path = "../quantum-crypto", default-features = false }
-
-# Consensus (using sp-runtime instead)
-
-[dev-dependencies]
-sp-core = { workspace = true }
-sp-io = { workspace = true }
-pallet-balances = { workspace = true }
 
 [features]
 default = ["std"]
 std = [
     "codec/std",
     "scale-info/std",
-    "serde",
     "frame-support/std",
     "frame-system/std",
     "sp-runtime/std",
     "sp-std/std",
     "sp-core/std",
     "sp-io/std",
+    # "sp-consensus-aura/std", # Removed
+    # "pallet-aura/std", # Removed
+    "pallet-timestamp/std",
     "pallet-quantum-crypto/std",
 ]
 runtime-benchmarks = [

@@ -1,5 +1,5 @@
 [package]
-name = "pallet-proof-of-coherence"
+name = "pallet-encrypted-payload"
 version = "1.0.0"
 authors.workspace = true
 edition.workspace = true
@@ -9,7 +9,6 @@ repository.workspace = true
 [dependencies]
 codec = { workspace = true, features = ["derive"] }
 scale-info = { workspace = true, features = ["derive"] }
-serde = { workspace = true, features = ["derive"], optional = true }
 
 # Substrate
 frame-support = { workspace = true }
@@ -20,13 +19,15 @@ sp-core = { workspace = true }
 sp-io = { workspace = true }
 
 # Quantum
-pallet-quantum-crypto = { path = "../quantum-crypto", default-features = false }
+pallet-quantum-crypto = { workspace = true }
 
-# Consensus (using sp-runtime instead)
+# Crypto - Using ChaCha20Poly1305 with quantum-safe keys from pallet-quantum-crypto
+chacha20poly1305 = { version = "0.10", default-features = false, features = ["alloc"] }
 
 [dev-dependencies]
 sp-core = { workspace = true }
 sp-io = { workspace = true }
+sp-runtime = { workspace = true }
 pallet-balances = { workspace = true }
 
 [features]
@@ -34,7 +35,6 @@ default = ["std"]
 std = [
     "codec/std",
     "scale-info/std",
-    "serde",
     "frame-support/std",
     "frame-system/std",
     "sp-runtime/std",
@@ -42,6 +42,7 @@ std = [
     "sp-core/std",
     "sp-io/std",
     "pallet-quantum-crypto/std",
+    "chacha20poly1305/std",
 ]
 runtime-benchmarks = [
     "frame-support/runtime-benchmarks",

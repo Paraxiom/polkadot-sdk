@@ -1,0 +1,49 @@
+[package]
+name = "quantum-node"
+version = "1.0.0"
+authors = ["Quantum Harmony Team"]
+edition = "2021"
+license = "GPL-3.0-only"
+
+[dependencies]
+# Core dependencies
+clap = { version = "4.5.16", features = ["derive"] }
+futures = "0.3.30"
+log = "0.4.22"
+serde_json = "1.0.128"
+ureq = "2.10.1"
+
+# Substrate dependencies
+sc-cli = { path = "../../client/cli" }
+sc-executor = { path = "../../client/executor" }
+sc-network = { path = "../../client/network" }
+sc-service = { path = "../../client/service" }
+sc-telemetry = { path = "../../client/telemetry" }
+sc-transaction-pool = { path = "../../client/transaction-pool" }
+sc-transaction-pool-api = { path = "../../client/transaction-pool/api" }
+sc-consensus = { path = "../../client/consensus/common" }
+sc-client-api = { path = "../../client/api" }
+sc-rpc-api = { path = "../../client/rpc-api" }
+
+# Primitives
+sp-core = { path = "../../primitives/core" }
+sp-runtime = { path = "../../primitives/runtime" }
+sp-timestamp = { path = "../../primitives/timestamp" }
+sp-inherents = { path = "../../primitives/inherents" }
+sp-keyring = { path = "../../primitives/keyring" }
+sp-api = { path = "../../primitives/api" }
+sp-blockchain = { path = "../../primitives/blockchain" }
+sp-block-builder = { path = "../../primitives/block-builder" }
+sp-quantum-wrapper = { path = "../../primitives/quantum-wrapper" }
+
+# Frame dependencies
+frame-system = { path = "../../frame/system" }
+pallet-quantum-crypto = { path = "../../frame/quantum-crypto" }
+pallet-transaction-payment = { path = "../../frame/transaction-payment" }
+
+# Runtime (to be created)
+# quantum-runtime = { path = "../../../quantum-runtime" }
+
+[[bin]]
+name = "quantum-node"
+path = "src/main.rs"

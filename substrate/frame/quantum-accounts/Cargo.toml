@@ -1,5 +1,5 @@
 [package]
-name = "pallet-proof-of-coherence"
+name = "pallet-quantum-accounts"
 version = "1.0.0"
 authors.workspace = true
 edition.workspace = true
@@ -7,9 +7,9 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-codec = { workspace = true, features = ["derive"] }
+codec = { workspace = true, features = ["derive", "max-encoded-len"] }
 scale-info = { workspace = true, features = ["derive"] }
-serde = { workspace = true, features = ["derive"], optional = true }
+log = { workspace = true }
 
 # Substrate
 frame-support = { workspace = true }
@@ -19,22 +19,20 @@ sp-std = { workspace = true }
 sp-core = { workspace = true }
 sp-io = { workspace = true }
 
-# Quantum
-pallet-quantum-crypto = { path = "../quantum-crypto", default-features = false }
-
-# Consensus (using sp-runtime instead)
+# Quantum crypto
+pallet-quantum-crypto = { workspace = true }
 
 [dev-dependencies]
 sp-core = { workspace = true }
 sp-io = { workspace = true }
-pallet-balances = { workspace = true }
+sp-runtime = { workspace = true }
 
 [features]
 default = ["std"]
 std = [
     "codec/std",
     "scale-info/std",
-    "serde",
+    "log/std",
     "frame-support/std",
     "frame-system/std",
     "sp-runtime/std",
