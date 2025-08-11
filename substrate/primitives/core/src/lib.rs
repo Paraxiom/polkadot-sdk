@@ -533,3 +533,4 @@ mod tests {
 		if_not_test!(panic!("This should not panic"));
 	}
 }
+mod quantum_tests;

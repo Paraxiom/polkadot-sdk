@@ -178,7 +178,7 @@ mod tests {
     
     #[test]
     fn quantum_signature_is_quantum_safe() {
-        let sphincs_sig = QuantumSignature::Sphincs(Default::default());
+        let sphincs_sig = QuantumSignature::Sphincs(sphincs::Signature([0u8; 8192]));
         assert!(sphincs_sig.is_quantum_safe());
     }
 }

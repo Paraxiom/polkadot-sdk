@@ -335,6 +335,7 @@ mod tests {
 
 	#[test]
 	fn test_bandwidth_efficiency() {
+		use crate::post_quantum::PostQuantumSignature;
 		let sig = Signature([0u8; SIGNATURE_SERIALIZED_SIZE]);
 		
 		// 9.6 kbps satellite link
