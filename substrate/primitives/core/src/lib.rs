@@ -79,6 +79,7 @@ pub mod falcon;
 pub mod post_quantum;
 pub mod quantum_randomness;
 pub mod quantum_signature;
+pub mod htm_simple;
 
 pub use self::{
 	hash::{convert_hash, H160, H256, H512},
@@ -86,6 +87,7 @@ pub use self::{
 };
 pub use crypto::{ByteArray, DeriveJunction, Pair, Public};
 pub use quantum_signature::{QuantumSignature, QuantumPublic, QuantumSigner};
+pub use htm_simple::{QuantumHTM, SimpleHTM};
 
 #[cfg(not(substrate_runtime))]
 pub use self::hasher::blake2::Blake2Hasher;
