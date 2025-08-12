@@ -3,6 +3,8 @@
 //! This module provides actual PQC signature implementations using
 //! SPHINCS+ and Falcon algorithms.
 
+use sha3::{Sha3_256, Digest};
+
 use crate::*;
 use sp_std::vec::Vec;
 use codec::{Encode, Decode};
@@ -87,7 +89,7 @@ impl PqcKeyPair {
     /// Generate without full_crypto feature (returns deterministic placeholder)
     #[cfg(not(feature = "full_crypto"))]
     pub fn generate(algorithm: PqcAlgorithm, seed: &[u8]) -> Result<Self, &'static str> {
-        let hash = sp_io::hashing::blake2_256(seed);
+        let hash = sha3_256(seed);
         
         let (pk_size, sk_size) = match algorithm {
             PqcAlgorithm::SphincsPlus => (64, 128),
@@ -99,13 +101,13 @@ impl PqcKeyPair {
         let mut secret_key = Vec::with_capacity(sk_size);
         
         for i in 0..(pk_size / 32 + 1) {
-            let chunk = sp_io::hashing::blake2_256(&[&hash[..], &[i as u8]].concat());
+            let chunk = sha3_256(&[&hash[..], &[i as u8]].concat());
             public_key.extend_from_slice(&chunk[..chunk.len().min(pk_size - public_key.len())]);
         }
         public_key.truncate(pk_size);
         
         for i in 0..(sk_size / 32 + 1) {
-            let chunk = sp_io::hashing::blake2_256(&[&hash[..], &[255 - i as u8]].concat());
+            let chunk = sha3_256(&[&hash[..], &[255 - i as u8]].concat());
             secret_key.extend_from_slice(&chunk[..chunk.len().min(sk_size - secret_key.len())]);
         }
         secret_key.truncate(sk_size);
@@ -164,11 +166,11 @@ impl PqcKeyPair {
         sig_data.extend_from_slice(&self.secret_key[..32]);
         sig_data.extend_from_slice(message);
         
-        let hash = sp_io::hashing::blake2_256(&sig_data);
+        let hash = sha3_256(&sig_data);
         let mut signature = Vec::with_capacity(sig_size);
         
         for i in 0..(sig_size / 32 + 1) {
-            let chunk = sp_io::hashing::blake2_256(&[&hash[..], &[i as u8]].concat());
+            let chunk = sha3_256(&[&hash[..], &[i as u8]].concat());
             signature.extend_from_slice(&chunk[..chunk.len().min(sig_size - signature.len())]);
         }
         signature.truncate(sig_size);
@@ -294,4 +296,13 @@ mod tests {
         let verified = verify_pqc_signature(&falcon_kp.public, message, &falcon_sig).unwrap();
         assert!(verified);
     }
+}
+// SHA3-256 helper function for quantum resistance
+fn sha3_256(data: &[u8]) -> [u8; 32] {
+    let mut hasher = Sha3_256::new();
+    hasher.update(data);
+    let result = hasher.finalize();
+    let mut output = [0u8; 32];
+    output.copy_from_slice(&result);
+    output
 }

@@ -14,7 +14,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use sp_std::{vec::Vec, vec};
-use sp_core::{H256, blake2_256};
+use sp_core::H256;
+use sha3::{Sha3_256, Digest};
 use codec::{Encode, Decode};
 use scale_info::TypeInfo;
 use frame_support::pallet_prelude::*;
@@ -134,7 +135,7 @@ impl LamportKeyPair {
         for i in 0..LAMPORT_KEY_CHUNKS * 2 {
             let start = i * LAMPORT_CHUNK_SIZE;
             let end = start + LAMPORT_CHUNK_SIZE;
-            let hash = blake2_256(&private_key[start..end]);
+            let hash = sha3_256(&private_key[start..end]);
             public_key_vec.extend_from_slice(&hash);
         }
         
@@ -150,7 +151,7 @@ impl LamportKeyPair {
     
     /// Sign a message using the Lamport private key
     pub fn sign(&self, message: &[u8]) -> LamportSignature {
-        let hash = blake2_256(message);
+        let hash = sha3_256(message);
         let mut signature_vec = Vec::with_capacity(LAMPORT_SIGNATURE_SIZE);
         
         // For each bit in the hash
@@ -192,7 +193,7 @@ pub fn verify_lamport_signature(
         return false;
     }
     
-    let hash = blake2_256(message);
+    let hash = sha3_256(message);
     
     // Verify each chunk of the signature
     for (byte_idx, byte) in hash.iter().enumerate() {
@@ -206,7 +207,7 @@ pub fn verify_lamport_signature(
             let sig_chunk = &signature.signature[sig_start..sig_end];
             
             // Hash the signature chunk
-            let sig_hash = blake2_256(sig_chunk);
+            let sig_hash = sha3_256(sig_chunk);
             
             // Get corresponding public key chunk
             let pub_offset = if bit == 0 {
@@ -239,12 +240,12 @@ impl DoubleRatchetState {
         let mut root_input = Vec::new();
         root_input.extend_from_slice(shared_secret);
         root_input.extend_from_slice(b"root");
-        let root_key = blake2_256(&root_input);
+        let root_key = sha3_256(&root_input);
         
         let mut chain_input = Vec::new();
         chain_input.extend_from_slice(shared_secret);
         chain_input.extend_from_slice(b"chain");
-        let chain_key = blake2_256(&chain_input);
+        let chain_key = sha3_256(&chain_input);
         
         // Generate initial Lamport key pair
         let sending_lamport = LamportKeyPair::generate::<T>(entropy_source)?;
@@ -367,19 +368,19 @@ impl DoubleRatchetState {
     
     /// Key derivation functions
     fn derive_message_key(&self, chain_key: [u8; 32]) -> [u8; 32] {
-        blake2_256(&[&chain_key[..], b"message"].concat())
+        sha3_256(&[&chain_key[..], b"message"].concat())
     }
     
     fn ratchet_chain_key(&self, chain_key: [u8; 32]) -> [u8; 32] {
-        blake2_256(&[&chain_key[..], b"chain"].concat())
+        sha3_256(&[&chain_key[..], b"chain"].concat())
     }
     
     fn kdf_root_key(&self, root_key: [u8; 32], shared_secret: [u8; 32]) -> [u8; 32] {
-        blake2_256(&[&root_key[..], &shared_secret[..], b"root"].concat())
+        sha3_256(&[&root_key[..], &shared_secret[..], b"root"].concat())
     }
     
     fn kdf_chain_key(&self, root_key: [u8; 32]) -> [u8; 32] {
-        blake2_256(&[&root_key[..], b"chain"].concat())
+        sha3_256(&[&root_key[..], b"chain"].concat())
     }
     
     fn derive_shared_secret(&self, public_key: &[u8]) -> [u8; 32] {
@@ -392,7 +393,7 @@ impl DoubleRatchetState {
         input.extend_from_slice(public_key);
         // Add counter for uniqueness
         input.extend_from_slice(&self.sending_counter.to_le_bytes());
-        blake2_256(&input)
+        sha3_256(&input)
     }
     
     /// Simple encryption (XOR with key stream)
@@ -429,7 +430,7 @@ impl DoubleRatchetState {
             let mut block_input = Vec::new();
             block_input.extend_from_slice(key);
             block_input.extend_from_slice(&counter.to_le_bytes());
-            let block = blake2_256(&block_input);
+            let block = sha3_256(&block_input);
             keystream.extend_from_slice(&block);
             counter += 1;
         }
@@ -525,4 +526,13 @@ mod tests {
         
         assert_eq!(plaintext.to_vec(), decrypted);
     }
+}
+// SHA3-256 helper function for quantum resistance
+fn sha3_256(data: &[u8]) -> [u8; 32] {
+    let mut hasher = Sha3_256::new();
+    hasher.update(data);
+    let result = hasher.finalize();
+    let mut output = [0u8; 32];
+    output.copy_from_slice(&result);
+    output
 }

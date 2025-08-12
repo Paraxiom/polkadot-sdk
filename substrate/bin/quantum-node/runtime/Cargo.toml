@@ -9,6 +9,7 @@ license = "GPL-3.0-only"
 # Core
 codec = { package = "parity-scale-codec", version = "3.6.12", default-features = false, features = ["derive"] }
 scale-info = { version = "2.11.1", default-features = false, features = ["derive"] }
+sha3 = { version = "0.10", default-features = false }
 
 # Substrate
 sp-api = { path = "../../../primitives/api", default-features = false }
@@ -67,4 +68,5 @@ std = [
     "pallet-encrypted-payload/std",
     "pallet-proof-of-coherence/std",
     "sp-quantum-wrapper/std",
+    "sha3/std",
 ]

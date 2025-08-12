@@ -239,12 +239,12 @@ impl<T: Config> Pallet<T> {
         // Hash the input with the key to create pseudo-VRF output
         let mut data_to_hash = validator_key.to_vec();
         data_to_hash.extend_from_slice(&vrf_input_data);
-        let output_hash = sp_core::blake2_256(&data_to_hash);
+        let output_hash = crate::Pallet::<T>::sha3_256(&data_to_hash);
         
         // Create pseudo-proof (96 bytes for VrfProof - post-quantum size)
-        let proof_hash1 = sp_core::blake2_256(&[&output_hash[..], &vrf_input_data[..]].concat());
-        let proof_hash2 = sp_core::blake2_256(&[&proof_hash1[..], validator_key].concat());
-        let proof_hash3 = sp_core::blake2_256(&[&proof_hash2[..], &output_hash[..]].concat());
+        let proof_hash1 = crate::Pallet::<T>::sha3_256(&[&output_hash[..], &vrf_input_data[..]].concat());
+        let proof_hash2 = crate::Pallet::<T>::sha3_256(&[&proof_hash1[..], validator_key].concat());
+        let proof_hash3 = crate::Pallet::<T>::sha3_256(&[&proof_hash2[..], &output_hash[..]].concat());
         let mut proof_data = [0u8; 96];
         proof_data[..32].copy_from_slice(&proof_hash1);
         proof_data[32..64].copy_from_slice(&proof_hash2);
@@ -272,7 +272,7 @@ impl<T: Config> Pallet<T> {
         // Recreate the expected output
         let mut data_to_hash = public_key.to_vec();
         data_to_hash.extend_from_slice(&vrf_input_data);
-        let expected_output = sp_core::blake2_256(&data_to_hash);
+        let expected_output = crate::Pallet::<T>::sha3_256(&data_to_hash);
         
         // Verify output matches
         if vrf_output != &expected_output {
@@ -280,9 +280,9 @@ impl<T: Config> Pallet<T> {
         }
         
         // Verify proof matches (96 bytes for post-quantum)
-        let expected_proof_hash1 = sp_core::blake2_256(&[&expected_output[..], &vrf_input_data[..]].concat());
-        let expected_proof_hash2 = sp_core::blake2_256(&[&expected_proof_hash1[..], public_key].concat());
-        let expected_proof_hash3 = sp_core::blake2_256(&[&expected_proof_hash2[..], &expected_output[..]].concat());
+        let expected_proof_hash1 = crate::Pallet::<T>::sha3_256(&[&expected_output[..], &vrf_input_data[..]].concat());
+        let expected_proof_hash2 = crate::Pallet::<T>::sha3_256(&[&expected_proof_hash1[..], public_key].concat());
+        let expected_proof_hash3 = crate::Pallet::<T>::sha3_256(&[&expected_proof_hash2[..], &expected_output[..]].concat());
         let mut expected_proof = [0u8; 96];
         expected_proof[..32].copy_from_slice(&expected_proof_hash1);
         expected_proof[32..64].copy_from_slice(&expected_proof_hash2);
