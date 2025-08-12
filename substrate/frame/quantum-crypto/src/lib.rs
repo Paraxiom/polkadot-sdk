@@ -1100,9 +1100,12 @@ pub mod pallet {
     // Hooks for offchain worker
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn offchain_worker(_block_number: BlockNumberFor<T>) {
-            // Offchain worker temporarily disabled for WASM build
-            // Self::offchain_worker(block_number);
+        fn offchain_worker(block_number: BlockNumberFor<T>) {
+            // Only run offchain worker in native execution (not WASM)
+            #[cfg(feature = "std")]
+            {
+                Self::offchain_worker_impl(block_number);
+            }
         }
     }
     
@@ -1112,13 +1115,12 @@ pub mod pallet {
         type Call = Call<T>;
         
         fn validate_unsigned(
-            _source: TransactionSource,
-            _call: &Self::Call,
+            source: TransactionSource,
+            call: &Self::Call,
         ) -> TransactionValidity {
-            // For now, accept all unsigned transactions
-            // TODO: Implement proper validation when offchain module is available
+            // Validate unsigned transactions from offchain workers
             #[cfg(feature = "std")]
-            return crate::offchain::validate_unsigned::<T>(_source, _call);
+            return crate::offchain::validate_unsigned::<T>(source, call);
             
             #[cfg(not(feature = "std"))]
             Ok(sp_runtime::transaction_validity::ValidTransaction::default())
@@ -1127,6 +1129,12 @@ pub mod pallet {
     
     // Helper functions
     impl<T: Config> Pallet<T> {
+        /// Offchain worker implementation wrapper
+        #[cfg(feature = "std")]
+        fn offchain_worker_impl(block_number: BlockNumberFor<T>) {
+            Self::offchain_worker(block_number);
+        }
+        
         /// Get quantum random bytes
         pub fn quantum_random(length: usize) -> Option<Vec<u8>> {
             let pool = EntropyPoolStorage::<T>::get();
