@@ -55,6 +55,7 @@ pub mod pallet {
         transaction_validity::{
             TransactionSource, TransactionValidity,
         },
+        SaturatedConversion,
     };
     use log::info;
     
@@ -291,6 +292,18 @@ pub mod pallet {
         T::AccountId,
         u32,
         ValueQuery,
+    >;
+    
+    /// Secure storage for QKD keys (encrypted with commitment hash)
+    #[pallet::storage]
+    pub type SecureQkdKeys<T: Config> = StorageDoubleMap<
+        _,
+        Blake2_128Concat,
+        H256, // Channel ID
+        Blake2_128Concat,
+        u64,  // Key index
+        (H256, BlockNumberFor<T>), // (Key commitment, expiry block)
+        OptionQuery,
     >;
     
     /// Storage for authorized reporters
@@ -689,9 +702,7 @@ pub mod pallet {
             ensure!(qber < 1500, Error::<T>::QberOutsidePhysicalLimits); // Max 15%
             
             // Store key material securely
-            // In production, this would encrypt and store in secure enclave
-            info!("Storing {} bytes of QKD key material for channel {:?}", 
-                key_material.len(), channel_id);
+            Self::store_qkd_key_secure(channel_id, &key_material, qber)?;
             
             // Update entropy pool with QKD-derived randomness
             let bounded_entropy: BoundedVec<u8, T::MaxEntropyPoolSize> = 
@@ -1158,6 +1169,72 @@ pub mod pallet {
             EntropyPoolStorage::<T>::put(entropy_pool);
             
             Ok(entropy)
+        }
+        
+        /// Store QKD key material securely
+        fn store_qkd_key_secure(
+            channel_id: H256,
+            key_material: &[u8],
+            qber: u32,
+        ) -> Result<(), Error<T>> {
+            // Calculate key commitment (hash of the key for verification)
+            let key_commitment = sp_io::hashing::blake2_256(key_material);
+            
+            // Calculate expiry based on QBER (lower QBER = longer validity)
+            let current_block = <frame_system::Pallet<T>>::block_number();
+            let validity_blocks = if qber < 200 { // < 2% QBER
+                14400u32 // ~24 hours at 6s blocks
+            } else if qber < 500 { // < 5% QBER
+                7200u32  // ~12 hours
+            } else {
+                3600u32  // ~6 hours
+            };
+            let expiry_block = current_block + validity_blocks.into();
+            
+            // Get next key index for this channel (simple incrementing counter)
+            // In production, this would be tracked separately for efficiency
+            let mut key_index = 0u64;
+            while SecureQkdKeys::<T>::contains_key(channel_id, key_index) {
+                key_index += 1;
+            }
+            
+            // Store commitment and expiry (actual key would be in HSM in production)
+            SecureQkdKeys::<T>::insert(
+                channel_id,
+                key_index,
+                (H256::from(key_commitment), expiry_block),
+            );
+            
+            // In production: Send key_material to Hardware Security Module
+            // For now, we only store the commitment on-chain
+            info!("Stored QKD key {} for channel {:?} with commitment {:?}, expires at block {:?}", 
+                key_index, channel_id, key_commitment, expiry_block);
+            
+            Ok(())
+        }
+        
+        /// Retrieve QKD key commitment
+        pub fn get_qkd_key_commitment(
+            channel_id: H256,
+            key_index: u64,
+        ) -> Option<(H256, BlockNumberFor<T>)> {
+            SecureQkdKeys::<T>::get(channel_id, key_index)
+        }
+        
+        /// Clean expired QKD keys
+        pub fn cleanup_expired_keys(current_block: BlockNumberFor<T>) {
+            // Remove expired keys
+            let mut expired_count = 0;
+            SecureQkdKeys::<T>::iter().for_each(|(channel_id, key_index, (_, expiry))| {
+                if expiry <= current_block {
+                    SecureQkdKeys::<T>::remove(channel_id, key_index);
+                    expired_count += 1;
+                }
+            });
+            
+            if expired_count > 0 {
+                info!("Cleaned up {} expired QKD keys", expired_count);
+            }
         }
         
         /// Verify hardware certificate (simplified)
