@@ -339,31 +339,25 @@ impl Keystore for LocalKeystore {
 		}
 	}
 
-	fn sphincs_public_keys(&self, _key_type: KeyTypeId) -> Vec<sphincs::Public> {
-		// TODO: Complete SPHINCS+ implementation - provides both SPHINCS+ and Falcon-512
-		// for bandwidth-aware post-quantum crypto selection (satellite communications)
-		Vec::new()
+	fn sphincs_public_keys(&self, key_type: KeyTypeId) -> Vec<sphincs::Public> {
+		self.public_keys::<sphincs::Pair>(key_type)
 	}
 
 	fn sphincs_generate_new(
 		&self,
 		key_type: KeyTypeId,
-		_seed: Option<&str>,
+		seed: Option<&str>,
 	) -> std::result::Result<sphincs::Public, TraitError> {
-		// TODO: Complete SPHINCS+ implementation - provides both SPHINCS+ and Falcon-512
-		// for bandwidth-aware post-quantum crypto selection (satellite communications)
-		Err(TraitError::KeyNotSupported(key_type))
+		self.generate_new::<sphincs::Pair>(key_type, seed)
 	}
 
 	fn sphincs_sign(
 		&self,
-		_key_type: KeyTypeId,
-		_public: &sphincs::Public,
-		_msg: &[u8],
+		key_type: KeyTypeId,
+		public: &sphincs::Public,
+		msg: &[u8],
 	) -> std::result::Result<Option<sphincs::Signature>, TraitError> {
-		// TODO: Complete SPHINCS+ implementation - provides both SPHINCS+ and Falcon-512
-		// for bandwidth-aware post-quantum crypto selection (satellite communications)
-		Ok(None)
+		self.sign::<sphincs::Pair>(key_type, public, msg)
 	}
 }
 

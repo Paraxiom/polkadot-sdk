@@ -96,16 +96,32 @@ pub fn build_quantum_transport(
 	memory_only: bool,
 	qkd_client: Option<Arc<dyn QkdClient>>,
 ) -> (Boxed<(PeerId, StreamMuxerBox)>, Arc<BandwidthSinks>) {
-	// For now, just use the standard transport
-	// TODO: Integrate quantum transport properly once the type system is sorted out
-	let (base_transport, bandwidth) = build_transport(keypair, memory_only);
+	let (base_transport, bandwidth) = build_transport(keypair.clone(), memory_only);
 	
-	if let Some(_qkd) = qkd_client {
-		// TODO: Integrate quantum transport properly with bandwidth logging
-		// For now, return base transport to get the build working
-		// The quantum transport needs to be integrated at a different layer
-		log::info!("Quantum transport requested but not yet integrated");
+	if let Some(qkd) = qkd_client {
+		// Create quantum transport wrapper
+		log::info!("Initializing quantum-enhanced transport layer");
+		
+		// The quantum transport wraps the base transport and adds quantum key exchange
+		// For bandwidth tracking, we share the same bandwidth sinks
+		let quantum_transport = QuantumTransport::new(base_transport, qkd);
+		
+		// Box the quantum transport to match the expected type
+		// The quantum transport outputs ((PeerId, StreamMuxerBox), Option<QuantumKey>)
+		// We need to map it back to just (PeerId, StreamMuxerBox)
+		let boxed_transport: Boxed<(PeerId, StreamMuxerBox)> = quantum_transport
+			.map(|((peer_id, muxer), quantum_key), _| {
+				if quantum_key.is_some() {
+					log::debug!("Quantum key established for peer {}", peer_id);
+				}
+				(peer_id, muxer)
+			})
+			.boxed();
+		
+		(boxed_transport, bandwidth)
+	} else {
+		// No QKD client provided, use standard transport
+		log::info!("Using standard transport (no quantum enhancement)");
+		(base_transport, bandwidth)
 	}
-	
-	(base_transport, bandwidth)
 }
