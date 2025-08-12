@@ -79,8 +79,7 @@ fn generate_key<Pair>(
 ) -> Result<String, &'static str>
 where
 	Pair: sp_core::Pair,
-	Pair::Public: IdentifyAccount,
-	<Pair::Public as IdentifyAccount>::AccountId: Ss58Codec,
+	Pair::Public: Ss58Codec,
 {
 	println!("Generating key containing pattern '{}'", desired);
 
@@ -97,7 +96,7 @@ where
 		}
 
 		let p = Pair::from_seed(&seed);
-		let ss58 = p.public().into_account().to_ss58check_with_version(network_override);
+		let ss58 = p.public().to_ss58check_with_version(network_override);
 		let score = calculate_score(desired, &ss58);
 		if score > best || desired.len() < 2 {
 			best = score;

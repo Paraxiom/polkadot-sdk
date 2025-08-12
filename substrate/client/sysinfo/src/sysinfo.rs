@@ -19,8 +19,8 @@
 use crate::{ExecutionLimit, HwBench};
 
 use sc_telemetry::SysInfo;
-use sp_core::{sr25519, Pair};
-use sp_io::crypto::sr25519_verify;
+use sp_core::{sphincs, Pair};
+use sp_io::crypto::sphincs_verify;
 
 use core::f64;
 use derive_more::From;
@@ -622,14 +622,14 @@ pub fn benchmark_disk_random_writes(
 	)
 }
 
-/// Benchmarks the verification speed of sr25519 signatures.
+/// Benchmarks the verification speed of SPHINCS+ signatures.
 ///
 /// Returns the throughput in B/s by convention.
 /// The values are rather small (0.4-0.8) so it is advised to convert them into KB/s.
-pub fn benchmark_sr25519_verify(limit: ExecutionLimit) -> Throughput {
+pub fn benchmark_sphincs_verify(limit: ExecutionLimit) -> Throughput {
 	const INPUT_SIZE: usize = 32;
 	const ITERATION_SIZE: usize = 2048;
-	let pair = sr25519::Pair::from_string("//Alice", None).unwrap();
+	let pair = sphincs::Pair::from_string("//Alice", None).unwrap();
 
 	let mut rng = rng();
 	let mut msgs = Vec::new();
@@ -645,19 +645,19 @@ pub fn benchmark_sr25519_verify(limit: ExecutionLimit) -> Throughput {
 
 	let run = || -> Result<(), String> {
 		for (sig, msg) in sigs.iter().zip(msgs.iter()) {
-			let mut ok = sr25519_verify(&sig, &msg[..], &pair.public());
+			let mut ok = sphincs_verify(sig.as_ref().to_vec(), &msg[..], &pair.public());
 			clobber_value(&mut ok);
 		}
 		Ok(())
 	};
 	benchmark(
-		"sr25519 verification score",
+		"SPHINCS+ verification score",
 		INPUT_SIZE * ITERATION_SIZE,
 		limit.max_iterations(),
 		limit.max_duration(),
 		run,
 	)
-	.expect("sr25519 verification cannot fail; qed")
+	.expect("SPHINCS+ verification cannot fail; qed")
 }
 
 /// Benchmarks the hardware and returns the results of those benchmarks.
@@ -833,9 +833,9 @@ mod tests {
 	}
 
 	#[test]
-	fn test_benchmark_sr25519_verify() {
+	fn test_benchmark_sphincs_verify() {
 		assert!(
-			benchmark_sr25519_verify(ExecutionLimit::MaxIterations(1)) > Throughput::from_mibs(0.0)
+			benchmark_sphincs_verify(ExecutionLimit::MaxIterations(1)) > Throughput::from_mibs(0.0)
 		);
 	}
 

@@ -150,11 +150,17 @@ impl<T: Config> Pallet<T> {
             Error::<T>::InvalidQuantumSignature
         );
         
+        // Create LamportSignature struct from the signature bytes
+        let lamport_sig = pallet_quantum_crypto::double_ratchet_lamport::LamportSignature {
+            signature: signature.signature.clone().try_into()
+                .map_err(|_| Error::<T>::InvalidQuantumSignature)?,
+        };
+        
         // Verify the Lamport signature using the verification function from quantum-crypto
         let verified = pallet_quantum_crypto::double_ratchet_lamport::verify_lamport_signature(
-            message,
-            &signature.signature,
             &signature.public_key,
+            message,
+            &lamport_sig,
         );
         
         ensure!(verified, Error::<T>::InvalidQuantumSignature);

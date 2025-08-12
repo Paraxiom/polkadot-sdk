@@ -22,7 +22,6 @@
 use aes_gcm::{aead::Aead, AeadCore, KeyInit};
 use rand::rngs::OsRng;
 // QUANTUM-SAFETY: sha2 not needed without ECIES
-use sp_core::crypto::Pair;
 
 /// x25519 secret key.
 pub type SecretKey = x25519_dalek::StaticSecret;

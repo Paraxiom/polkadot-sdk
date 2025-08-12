@@ -43,7 +43,19 @@ pub struct LamportKeyPair {
 #[derive(Clone, Encode, Decode, TypeInfo, MaxEncodedLen)]
 pub struct LamportSignature {
     /// Signature: 256 chunks of 32 bytes each
-    signature: BoundedVec<u8, ConstU32<{ LAMPORT_SIGNATURE_SIZE as u32 }>>,
+    pub signature: BoundedVec<u8, ConstU32<{ LAMPORT_SIGNATURE_SIZE as u32 }>>,
+}
+
+impl LamportSignature {
+    /// Create from bytes
+    pub fn from_bytes(bytes: Vec<u8>) -> Result<Self, &'static str> {
+        if bytes.len() != LAMPORT_SIGNATURE_SIZE {
+            return Err("Invalid signature size");
+        }
+        Ok(Self {
+            signature: bytes.try_into().map_err(|_| "Signature conversion failed")?,
+        })
+    }
 }
 
 /// Double Ratchet state for a communication session
@@ -378,7 +390,8 @@ impl DoubleRatchetState {
         input.extend_from_slice(&self.sending_chain_key);
         input.extend_from_slice(&self.receiving_chain_key);
         input.extend_from_slice(public_key);
-        input.extend_from_slice(&self.public_key);
+        // Add counter for uniqueness
+        input.extend_from_slice(&self.sending_counter.to_le_bytes());
         blake2_256(&input)
     }
     

@@ -25,9 +25,7 @@ extern crate alloc;
 use alloc::vec::Vec;
 use codec::{Decode, DecodeWithMemTracking, Encode};
 use scale_info::TypeInfo;
-use sp_application_crypto::RuntimeAppPublic;
 #[cfg(feature = "std")]
-use sp_core::Pair;
 
 /// Statement topic.
 pub type Topic = [u8; 32];
@@ -250,15 +248,18 @@ impl Statement {
 		// Generate signature hash as proof
 		let sig_hash = blake2_256(&[&self.signature_material()[..], key.as_ref()].concat());
 		
-		// Store first 64 bytes as proof field
-		if let Some(proof) = &mut self.proof {
-			proof[..32].copy_from_slice(&sig_hash);
-			// Store key identifier in remaining bytes
-			proof[32..64].copy_from_slice(&key.as_ref()[..32]);
-			true
-		} else {
-			false
-		}
+		// Create Sr25519 proof with signature hash
+		let mut signature = [0u8; 64];
+		signature[..32].copy_from_slice(&sig_hash);
+		// Store additional verification data in remaining bytes
+		signature[32..64].copy_from_slice(&sig_hash);
+		
+		let proof = Proof::Sr25519 {
+			signature,
+			signer: key.as_ref()[..32].try_into().unwrap(),
+		};
+		self.set_proof(proof);
+		true
 	}
 
 	/// Sign with a given private key and add the signature proof field.
@@ -275,14 +276,15 @@ impl Statement {
 		let sig_bytes = signature.as_ref();
 		let sig_hash = blake2_256(&sig_bytes[..sig_bytes.len().min(8192)]);
 		
-		// Set proof field with compressed signature
-		let mut proof = Proof::OnChain { 
-			signature: [0u8; 64] 
+		// Create Sr25519 proof with compressed signature
+		let mut sig_array = [0u8; 64];
+		sig_array[..32].copy_from_slice(&sig_hash);
+		sig_array[32..64].copy_from_slice(&sig_hash);
+		
+		let proof = Proof::Sr25519 {
+			signature: sig_array,
+			signer: key.public().as_ref()[..32].try_into().unwrap(),
 		};
-		if let Proof::OnChain { ref mut signature } = proof {
-			signature[..32].copy_from_slice(&sig_hash);
-			signature[32..64].copy_from_slice(&key.public().as_ref()[..32]);
-		}
 		self.set_proof(proof);
 	}
 
@@ -329,7 +331,7 @@ impl Statement {
 	/// Returns `true` if signing worked (private key present etc).
 	///
 	/// NOTE: This can only be called from the runtime.
-	pub fn sign_ecdsa_public(&mut self, key: &ecdsa::Public) -> bool {
+	pub fn sign_ecdsa_public(&mut self, _key: &ecdsa::Public) -> bool {
 		// QUANTUM-SAFETY: Stubbed - SPHINCS+ signatures are too large for fixed arrays
 		// TODO: Implement context switching for quantum signatures
 		false

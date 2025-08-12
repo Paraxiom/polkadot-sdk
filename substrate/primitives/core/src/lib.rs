@@ -72,6 +72,10 @@ pub mod uint;
 
 // Classical crypto modules removed for quantum-safety
 // Only quantum-safe cryptography is supported
+// Stub modules for backward compatibility
+pub mod ecdsa;
+pub mod sr25519;
+pub mod ed25519;
 pub mod crypto_bytes;
 pub mod paired_crypto;
 pub mod sphincs;

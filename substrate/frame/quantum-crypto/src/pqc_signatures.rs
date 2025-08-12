@@ -12,7 +12,7 @@ use scale_info::TypeInfo;
 use pqcrypto_traits::sign::{PublicKey as PqcPublicKey, SecretKey as PqcSecretKey, SignedMessage};
 
 /// Post-quantum signature algorithms
-#[derive(Clone, Debug, Encode, Decode, TypeInfo, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Encode, Decode, TypeInfo, PartialEq, Eq)]
 pub enum PqcAlgorithm {
     /// SPHINCS+ - Hash-based, largest signatures but most conservative security
     SphincsPlus,
