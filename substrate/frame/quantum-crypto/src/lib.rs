@@ -49,8 +49,7 @@ pub mod pallet {
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
     use sp_std::vec::Vec;
-    use sp_core::H256;
-    use sha3::{Sha3_256, Digest};
+    use sp_core::{H256, blake2_256};
     // use frame_system::offchain::SubmitTransaction; // Commented out until offchain worker is properly configured
     use sp_runtime::{
         transaction_validity::{
@@ -1011,7 +1010,7 @@ pub mod pallet {
             
             RatchetSessions::<T>::insert(&peer, &who, peer_session);
             
-            let session_id = H256::from(Self::sha3_256(&[&who.encode()[..], &peer.encode()[..]].concat()));
+            let session_id = H256::from(blake2_256(&[&who.encode()[..], &peer.encode()[..]].concat()));
             
             Self::deposit_event(Event::RatchetSessionEstablished {
                 alice: who,
@@ -1141,15 +1140,6 @@ pub mod pallet {
     
     // Helper functions
     impl<T: Config> Pallet<T> {
-        /// SHA3-256 hash function for quantum resistance
-        pub fn sha3_256(data: &[u8]) -> [u8; 32] {
-            let mut hasher = Sha3_256::new();
-            hasher.update(data);
-            let result = hasher.finalize();
-            let mut output = [0u8; 32];
-            output.copy_from_slice(&result);
-            output
-        }
         /// Offchain worker implementation wrapper
         #[cfg(feature = "std")]
         fn offchain_worker_impl(block_number: BlockNumberFor<T>) {
@@ -1188,7 +1178,7 @@ pub mod pallet {
             qber: u32,
         ) -> Result<(), Error<T>> {
             // Calculate key commitment (hash of the key for verification)
-            let key_commitment = Self::sha3_256(key_material);
+            let key_commitment = sp_io::hashing::blake2_256(key_material);
             
             // Calculate expiry based on QBER (lower QBER = longer validity)
             let current_block = <frame_system::Pallet<T>>::block_number();

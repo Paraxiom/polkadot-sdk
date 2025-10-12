@@ -10,8 +10,7 @@
 
 use crate::PeerId;
 use core::fmt;
-use sp_core::{sphincs, crypto::Pair as CryptoPair};
-use sha3::{Sha3_256, Digest};
+use sp_core::{sphincs, hashing, crypto::Pair as CryptoPair};
 use zeroize::Zeroize;
 
 /// Error type for quantum identity operations
@@ -93,12 +92,9 @@ impl PublicKey {
 	pub fn to_peer_id(&self) -> PeerId {
 		// For now, we use a hash of the SPHINCS+ public key
 		// In production, this would integrate with the quantum transport layer
-		// Use SHA3-256 for quantum-resistant PeerId generation
+		// Use the raw bytes of the public key for PeerId generation
 		let bytes = self.0.as_ref();
-		let mut hasher = Sha3_256::new();
-		hasher.update(bytes);
-		let hash = hasher.finalize();
-		PeerId::from_bytes(&hash[..]).unwrap()
+		PeerId::from_bytes(&hashing::blake2_256(bytes)[..]).unwrap()
 	}
 }
 
@@ -174,26 +170,20 @@ impl Keypair {
 	/// This is for network layer compatibility only
 	pub fn to_libp2p_ed25519(&self) -> Vec<u8> {
 		// Return the seed bytes that can be used to construct libp2p::identity::ed25519::Keypair
-		// Use SHA3-256 to generate a deterministic seed
+		// Use the public key to generate a deterministic seed
 		let public_key = self.0.public();
 		let public_bytes = public_key.as_ref();
-		let mut hasher = Sha3_256::new();
-		hasher.update(public_bytes);
-		let hash = hasher.finalize();
-		hash.to_vec()
+		let seed = hashing::blake2_256(public_bytes);
+		seed.to_vec()
 	}
 }
 
 impl PublicKey {
 	/// Convert to libp2p-compatible ed25519 public key bytes
 	pub fn to_libp2p_ed25519_bytes(&self) -> [u8; 32] {
-		// Generate deterministic ed25519 public key from quantum public key using SHA3
-		let mut hasher = Sha3_256::new();
-		hasher.update(self.0.as_ref());
-		let hash = hasher.finalize();
-		let mut bytes = [0u8; 32];
-		bytes.copy_from_slice(&hash[..32]);
-		bytes
+		// Generate deterministic ed25519 public key from quantum public key
+		let seed = hashing::blake2_256(self.0.as_ref());
+		seed
 	}
 }
 
