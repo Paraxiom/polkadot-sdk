@@ -20,7 +20,7 @@
 // use crate::{ed25519, sr25519, U256}; // Removed for quantum-safety
 use crate::U256;
 // Quantum imports for PQC
-use crate::QuantumHasher;
+// use crate::QuantumHasher;  // Unused import
 use alloc::{format, str, vec::Vec};
 #[cfg(feature = "serde")]
 use alloc::{string::String, vec};

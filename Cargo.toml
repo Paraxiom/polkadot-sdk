@@ -1568,4 +1568,4 @@ yamux = { opt-level = 3 }
 zeroize = { opt-level = 3 }
 
 [patch.crates-io]
-yamux = { path = "/home/paraxiom/yamux-fork/yamux" }
+# yamux = { path = "/home/paraxiom/yamux-fork/yamux" }

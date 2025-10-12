@@ -25,8 +25,8 @@ use alloc::fmt;
 /// Test account crypto for sphincs (quantum-safe).
 pub mod sphincs;
 
-// Quantum-vulnerable crypto removed - use sphincs instead
-// pub mod sr25519;
+// Quantum-vulnerable crypto stubs for backward compatibility (redirect to SPHINCS+)
+pub mod sr25519;
 // pub mod ed25519;
 
 /// Test account crypto for bandersnatch.
@@ -36,9 +36,9 @@ pub mod bandersnatch;
 #[cfg(feature = "bandersnatch-experimental")]
 pub use bandersnatch::Keyring as BandersnatchKeyring;
 pub use sphincs::Keyring as SphincsKeyring;
-// Quantum-vulnerable keyrings removed
+// Quantum-vulnerable keyrings (backward compatibility stubs - redirect to SPHINCS+)
 // pub use ed25519::Keyring as Ed25519Keyring;
-// pub use sr25519::Keyring as Sr25519Keyring;
+pub use sr25519::Keyring as Sr25519Keyring;
 
 #[derive(Debug)]
 /// Represents an error that occurs when parsing a string into a `KeyRing`.

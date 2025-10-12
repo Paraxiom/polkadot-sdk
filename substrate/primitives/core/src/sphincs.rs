@@ -29,10 +29,15 @@ use core::convert::TryFrom;
 #[cfg(feature = "serde")]
 use crate::crypto::Ss58Codec;
 use crate::crypto::{
-	ByteArray, CryptoType, CryptoTypeId, DeriveError, DeriveJunction, Pair as TraitPair, 
+	ByteArray, CryptoType, CryptoTypeId, DeriveError, DeriveJunction, Pair as TraitPair,
 	Public as PublicTrait, Signature as SignatureTrait,
-	SecretStringError, UncheckedFrom, AccountId32,
+	SecretStringError, UncheckedFrom,
 };
+
+#[cfg(feature = "std")]
+use secrecy::ExposeSecret;
+#[cfg(feature = "std")]
+use crate::address_uri;
 
 #[cfg(feature = "full_crypto")]
 use pqcrypto_sphincsplus::sphincsshake256fsimple as sphincs_impl;
@@ -447,11 +452,22 @@ impl TraitPair for Pair {
 	type Signature = Signature;
 
 	fn from_seed_slice(seed_slice: &[u8]) -> Result<Self, SecretStringError> {
-		if seed_slice.len() != 48 {
-			return Err(SecretStringError::InvalidSeedLength)
-		}
-		let mut seed = [0u8; 48];
-		seed.copy_from_slice(seed_slice);
+		// SPHINCS+ requires exactly 48 bytes of entropy
+		// If seed is not 48 bytes, hash it to generate deterministic 48-byte seed
+		let seed = if seed_slice.len() == 48 {
+			let mut s = [0u8; 48];
+			s.copy_from_slice(seed_slice);
+			s
+		} else {
+			// Use blake2_256 twice to generate 48 bytes deterministically
+			use crate::blake2_256;
+			let hash1 = blake2_256(seed_slice);
+			let hash2 = blake2_256(&hash1);
+			let mut s = [0u8; 48];
+			s[..32].copy_from_slice(&hash1);
+			s[32..].copy_from_slice(&hash2[..16]);
+			s
+		};
 		Ok(Self::from_seed(&Seed::from(seed)))
 	}
 
@@ -462,6 +478,132 @@ impl TraitPair for Pair {
 	) -> Result<(Self, Option<Self::Seed>), DeriveError> {
 		// SPHINCS+ doesn't support key derivation in the traditional sense
 		Err(DeriveError::SoftKeyInPath)
+	}
+
+	/// Generate a key pair from BIP39 phrase or simple string
+	#[cfg(feature = "std")]
+	fn from_phrase(
+		phrase: &str,
+		password: Option<&str>,
+	) -> Result<(Self, Self::Seed), SecretStringError> {
+		use bip39::{Language, Mnemonic};
+
+		// Try to parse as BIP39 mnemonic first
+		if let Ok(mnemonic) = Mnemonic::parse_in(Language::English, phrase) {
+			let (entropy, entropy_len) = mnemonic.to_entropy_array();
+			let mut seed_material = entropy[..entropy_len].to_vec();
+
+			// Mix in password if provided
+			if let Some(pass) = password {
+				seed_material.extend_from_slice(pass.as_bytes());
+			}
+
+			// Hash to get 48-byte seed
+			use crate::blake2_256;
+			let hash1 = blake2_256(&seed_material);
+			let hash2 = blake2_256(&hash1);
+			let mut seed_bytes = [0u8; 48];
+			seed_bytes[..32].copy_from_slice(&hash1);
+			seed_bytes[32..].copy_from_slice(&hash2[..16]);
+
+			let seed = Seed::from(seed_bytes);
+			Ok((Self::from_seed(&seed), seed))
+		} else {
+			// Not a valid mnemonic, treat as simple string seed
+			let mut seed_material = phrase.as_bytes().to_vec();
+			if let Some(pass) = password {
+				seed_material.extend_from_slice(pass.as_bytes());
+			}
+
+			// Hash to get 48-byte seed
+			use crate::blake2_256;
+			let hash1 = blake2_256(&seed_material);
+			let hash2 = blake2_256(&hash1);
+			let mut seed_bytes = [0u8; 48];
+			seed_bytes[..32].copy_from_slice(&hash1);
+			seed_bytes[32..].copy_from_slice(&hash2[..16]);
+
+			let seed = Seed::from(seed_bytes);
+			Ok((Self::from_seed(&seed), seed))
+		}
+	}
+
+	/// Override from_string to handle simple seed phrases without derivation
+	/// SPHINCS+ doesn't support HD key derivation, so we treat the entire string as a seed
+	#[cfg(feature = "std")]
+	fn from_string(s: &str, password_override: Option<&str>) -> Result<Self, SecretStringError> {
+		Self::from_string_with_seed(s, password_override).map(|x| x.0)
+	}
+
+	/// Custom implementation that treats derivation-like syntax as simple seed material
+	/// For SPHINCS+, "//Alice" is just treated as the seed string "Alice"
+	#[cfg(feature = "std")]
+	fn from_string_with_seed(
+		s: &str,
+		password_override: Option<&str>,
+	) -> Result<(Self, Option<Self::Seed>), SecretStringError> {
+		use alloc::str::FromStr;
+		use crate::crypto::SecretUri;
+
+		let SecretUri { junctions, phrase, password } = SecretUri::from_str(s)?;
+		let password =
+			password_override.or_else(|| password.as_ref().map(|p| p.expose_secret().as_str()));
+
+		// For SPHINCS+, we don't support derivation paths
+		// We'll use the phrase and any junction names as seed material
+		let (root, seed) = if let Some(stripped) = phrase.expose_secret().strip_prefix("0x") {
+			// Hex seed
+			let d = match array_bytes::hex2bytes(stripped) {
+				Ok(bytes) => bytes,
+				Err(_) => return Err(SecretStringError::InvalidPhrase),
+			};
+			let pair = Self::from_seed_slice(&d)?;
+			let seed = if d.len() == 48 {
+				let mut s = [0u8; 48];
+				s.copy_from_slice(&d);
+				Seed::from(s)
+			} else {
+				// Hash to 48 bytes
+				use crate::blake2_256;
+				let hash1 = blake2_256(&d);
+				let hash2 = blake2_256(&hash1);
+				let mut s = [0u8; 48];
+				s[..32].copy_from_slice(&hash1);
+				s[32..].copy_from_slice(&hash2[..16]);
+				Seed::from(s)
+			};
+			(pair, seed)
+		} else {
+			// Mnemonic phrase or simple string
+			// For simple strings (like just a name), use them directly as seed material
+			Self::from_phrase(phrase.expose_secret().as_str(), password)
+				.map_err(|_| SecretStringError::InvalidPhrase)?
+		};
+
+		// If there are junctions (like //Alice), incorporate them into the seed
+		// but don't try to derive - just use them as additional entropy
+		if !junctions.is_empty() {
+			use crate::blake2_256;
+			let mut seed_bytes = seed.as_ref().to_vec();
+			for junction in junctions.iter() {
+				// Mix in the junction data
+				match junction {
+					DeriveJunction::Soft(cc) | DeriveJunction::Hard(cc) => {
+						seed_bytes.extend_from_slice(cc);
+					}
+				}
+			}
+			// Hash the combined seed material to get final 48-byte seed
+			let hash1 = blake2_256(&seed_bytes);
+			let hash2 = blake2_256(&hash1);
+			let mut final_seed = [0u8; 48];
+			final_seed[..32].copy_from_slice(&hash1);
+			final_seed[32..].copy_from_slice(&hash2[..16]);
+			let seed_obj = Seed::from(final_seed);
+			Ok((Self::from_seed(&seed_obj), Some(seed_obj)))
+		} else {
+			Ok((root, Some(seed)))
+		}
 	}
 
 	fn public(&self) -> Self::Public {

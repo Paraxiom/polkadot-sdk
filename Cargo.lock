@@ -9477,7 +9477,7 @@ dependencies = [
  "thiserror 1.0.69",
  "tracing",
  "yamux 0.12.1",
- "yamux 0.13.6",
+ "yamux 0.13.7",
 ]
 
 [[package]]
@@ -9701,7 +9701,7 @@ dependencies = [
  "url",
  "x25519-dalek",
  "x509-parser 0.17.0",
- "yamux 0.13.6",
+ "yamux 0.13.7",
  "yasna",
  "zeroize",
 ]
@@ -28025,7 +28025,9 @@ dependencies = [
 
 [[package]]
 name = "yamux"
-version = "0.13.6"
+version = "0.13.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6927cfe0edfae4b26a369df6bad49cd0ef088c0ec48f4045b2084bcaedc10246"
 dependencies = [
  "futures",
  "log",

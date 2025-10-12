@@ -21,5 +21,8 @@ pub type Signature = sphincs::Signature;
 /// Sr25519 key pair (stub - uses SPHINCS+ internally)
 pub type Pair = sphincs::Pair;
 
+/// Sr25519 seed (stub - uses SPHINCS+ internally)
+pub type Seed = sphincs::Seed;
+
 /// Sr25519 crypto type identifier
 pub const CRYPTO_ID: CryptoTypeId = CryptoTypeId(*b"sr25");

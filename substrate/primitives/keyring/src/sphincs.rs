@@ -18,7 +18,7 @@
 //! Support code for the runtime. A set of test accounts with SPHINCS+ keys.
 
 use crate::ParseKeyringError;
-use alloc::{fmt, str::FromStr, vec::Vec};
+use alloc::{fmt, str::FromStr, string::String, vec::Vec};
 use sp_core::{crypto::Ss58Codec, sphincs};
 use sp_core::crypto::Pair as TraitPair;
 
@@ -76,8 +76,9 @@ impl Keyring {
 		self.public()
 	}
 
+	#[cfg(feature = "full_crypto")]
 	pub fn sign(self, msg: &[u8]) -> sphincs::Signature {
-		self.pair().sign(msg)
+		<sphincs::Pair as TraitPair>::sign(&self.pair(), msg)
 	}
 
 	pub fn pair(self) -> sphincs::Pair {

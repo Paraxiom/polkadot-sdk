@@ -57,50 +57,24 @@ pub type VrfTranscript = Vec<u8>;
 pub const KEY_TYPE: sp_core::crypto::KeyTypeId = sp_application_crypto::key_types::BABE;
 
 // BABE is being replaced by Proof of Coherence
-// These are stub types to maintain compilation during migration
+// Temporarily using sr25519 for compatibility with sc-consensus-manual-seal during migration
 
-/// Stub public key type for BABE migration
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Encode, Decode, TypeInfo, MaxEncodedLen)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct BabePublicStub([u8; 32]);
-
-/// Stub signature type for BABE migration  
-#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, TypeInfo)]
-pub struct BabeSignatureStub([u8; 64]);
-
-/// A BABE authority keypair - stub for migration
-#[cfg(feature = "std")]
-pub struct AuthorityPair;
-
-/// A BABE authority signature - stub for migration
-pub type AuthoritySignature = BabeSignatureStub;
-
-/// A BABE authority identifier - stub for migration
-pub type AuthorityId = BabePublicStub;
-
-// Implement minimal RuntimeAppPublic for AuthorityId
-impl sp_application_crypto::RuntimeAppPublic for BabePublicStub {
-	const ID: sp_application_crypto::KeyTypeId = KEY_TYPE;
-	type Signature = BabeSignatureStub;
-	
-	fn all() -> Vec<Self> { Vec::new() }
-	fn generate_pair(_: Option<Vec<u8>>) -> Self { BabePublicStub([0u8; 32]) }
-	fn sign<M: AsRef<[u8]>>(&self, _: &M) -> Option<Self::Signature> { None }
-	fn verify<M: AsRef<[u8]>>(&self, _: &M, _: &Self::Signature) -> bool { false }
-	fn to_raw_vec(&self) -> Vec<u8> { self.0.to_vec() }
-	fn generate_proof_of_possession(&mut self) -> Option<Self::Signature> { None }
-	fn verify_proof_of_possession(&self, _: &Self::Signature) -> bool { false }
+mod app {
+	use sp_application_crypto::app_crypto;
+	use sp_core::sr25519;
+	app_crypto!(sr25519, super::KEY_TYPE);
 }
 
-impl BabePublicStub {
-	/// Get inner reference - stub
-	pub fn as_inner_ref(&self) -> &[u8; 32] { &self.0 }
-	
-	/// Make bytes - stub for VRF
-	pub fn make_bytes(&self, _: &[u8], _: &VrfTranscript, _: &VrfPreOutput) -> Option<[u8; 32]> {
-		Some([0u8; 32])
-	}
+sp_application_crypto::with_pair! {
+	/// A BABE authority keypair using sr25519 as its crypto.
+	pub type AuthorityPair = app::Pair;
 }
+
+/// A BABE authority signature.
+pub type AuthoritySignature = app::Signature;
+
+/// A BABE authority identifier.
+pub type AuthorityId = app::Public;
 
 /// VRF context used for per-slot randomness generation.
 pub const RANDOMNESS_VRF_CONTEXT: &[u8] = b"BabeVRFInOutContext";

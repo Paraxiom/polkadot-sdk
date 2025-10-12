@@ -33,11 +33,12 @@ use polkadot_primitives::{
 	vstaging::{
 		CommittedCandidateReceiptError, CommittedCandidateReceiptV2 as CommittedCandidateReceipt,
 	},
-	BlakeTwo256, BlockNumber, CandidateCommitments, CandidateHash, ChunkIndex, CollatorPair,
+	BlockNumber, CandidateCommitments, CandidateHash, ChunkIndex, CollatorPair,
 	CompactStatement, CoreIndex, EncodeAs, Hash, HashT, HeadData, Id as ParaId,
 	PersistedValidationData, SessionIndex, Signed, UncheckedSigned, ValidationCode,
 	ValidationCodeHash, MAX_CODE_SIZE, MAX_POV_SIZE,
 };
+use sp_runtime::traits::BlakeTwo256;
 pub use sp_consensus_babe::{
 	AllowedSlots as BabeAllowedSlots, BabeEpochConfiguration, Epoch as BabeEpoch,
 	Randomness as BabeRandomness,
