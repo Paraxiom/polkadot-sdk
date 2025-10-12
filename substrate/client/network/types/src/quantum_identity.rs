@@ -10,7 +10,8 @@
 
 use crate::PeerId;
 use core::fmt;
-use sp_core::{sphincs, hashing, crypto::Pair as CryptoPair};
+use sp_core::{sphincs, crypto::Pair as CryptoPair};
+use sha3::{Sha3_256, Digest};
 use zeroize::Zeroize;
 
 /// Error type for quantum identity operations
@@ -92,9 +93,12 @@ impl PublicKey {
 	pub fn to_peer_id(&self) -> PeerId {
 		// For now, we use a hash of the SPHINCS+ public key
 		// In production, this would integrate with the quantum transport layer
-		// Use the raw bytes of the public key for PeerId generation
+		// Use SHA3-256 for quantum-resistant PeerId generation
 		let bytes = self.0.as_ref();
-		PeerId::from_bytes(&hashing::blake2_256(bytes)[..]).unwrap()
+		let mut hasher = Sha3_256::new();
+		hasher.update(bytes);
+		let hash = hasher.finalize();
+		PeerId::from_bytes(&hash[..]).unwrap()
 	}
 }
 
