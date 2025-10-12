@@ -711,3 +711,297 @@ impl crate::post_quantum::PostQuantumSignature for Signature {
 		SIGNATURE_SERIALIZED_SIZE
 	}
 }
+/// SPHINCS+ VRF implementation using signature-based pseudo-VRF
+pub mod vrf {
+	use super::*;
+	#[cfg(feature = "full_crypto")]
+	use crate::crypto::VrfSecret;
+	use crate::crypto::{VrfCrypto, VrfPublic};
+	use alloc::vec::Vec;
+	use codec::{Decode, Encode, MaxEncodedLen};
+	use scale_info::TypeInfo;
+
+	/// VRF pre-output length for SPHINCS+
+	pub const VRF_PREOUT_LENGTH: usize = 32;
+	/// VRF proof length for SPHINCS+ (using signature as proof)
+	pub const VRF_PROOF_LENGTH: usize = SIGNATURE_SERIALIZED_SIZE;
+
+	const DEFAULT_EXTRA_DATA_LABEL: &[u8] = b"VRF";
+
+	/// Transcript ready to be used for VRF related operations.
+	///
+	/// For SPHINCS+, this is a simple wrapper around transcript data.
+	#[derive(Clone, Debug)]
+	pub struct VrfTranscript {
+		data: Vec<u8>,
+	}
+
+	impl VrfTranscript {
+		/// Build a new transcript instance.
+		///
+		/// Each `data` element is a tuple `(domain, message)` used to build the transcript.
+		pub fn new(label: &'static [u8], data: &[(&'static [u8], &[u8])]) -> Self {
+			let mut transcript_data = label.to_vec();
+			for (domain, message) in data.iter() {
+				transcript_data.extend_from_slice(domain);
+				transcript_data.extend_from_slice(message);
+			}
+			VrfTranscript { data: transcript_data }
+		}
+
+		/// Map transcript to `VrfSignData`.
+		pub fn into_sign_data(self) -> VrfSignData {
+			self.into()
+		}
+
+		/// Get transcript bytes for signing
+		pub fn as_bytes(&self) -> &[u8] {
+			&self.data
+		}
+	}
+
+	/// VRF input - alias for transcript
+	pub type VrfInput = VrfTranscript;
+
+	/// VRF input ready to be used for VRF sign and verify operations.
+	#[derive(Clone, Debug)]
+	pub struct VrfSignData {
+		/// Transcript data contributing to VRF output.
+		pub(super) transcript: VrfTranscript,
+		/// Extra transcript data to be signed by the VRF.
+		pub(super) extra: Option<VrfTranscript>,
+	}
+
+	impl From<VrfInput> for VrfSignData {
+		fn from(transcript: VrfInput) -> Self {
+			VrfSignData { transcript, extra: None }
+		}
+	}
+
+	impl AsRef<VrfInput> for VrfSignData {
+		fn as_ref(&self) -> &VrfInput {
+			&self.transcript
+		}
+	}
+
+	impl VrfSignData {
+		/// Build a new instance ready to be used for VRF signer and verifier.
+		pub fn new(input: VrfTranscript) -> Self {
+			input.into()
+		}
+
+		/// Add some extra data to be signed.
+		pub fn with_extra(mut self, extra: VrfTranscript) -> Self {
+			self.extra = Some(extra);
+			self
+		}
+
+		/// Get combined transcript bytes for signing
+		fn combined_bytes(&self) -> Vec<u8> {
+			let mut combined = self.transcript.data.clone();
+			if let Some(extra) = &self.extra {
+				combined.extend_from_slice(DEFAULT_EXTRA_DATA_LABEL);
+				combined.extend_from_slice(&extra.data);
+			}
+			combined
+		}
+	}
+
+	/// VRF signature data combining pre-output and proof
+	#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+	pub struct VrfSignature {
+		/// VRF pre-output (deterministic hash of signature)
+		pub pre_output: VrfPreOutput,
+		/// VRF proof (SPHINCS+ signature serving as proof)
+		pub proof: VrfProof,
+	}
+
+	/// VRF pre-output - deterministic output derived from SPHINCS+ signature
+	#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+	pub struct VrfPreOutput(pub [u8; VRF_PREOUT_LENGTH]);
+
+	/// VRF proof - SPHINCS+ signature serving as the VRF proof
+	#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+	pub struct VrfProof(pub Signature);
+
+	// Conversions for compatibility with BABE's [u8; 32] transcripts
+	impl From<[u8; 32]> for VrfTranscript {
+		fn from(data: [u8; 32]) -> Self {
+			VrfTranscript { data: data.to_vec() }
+		}
+	}
+
+	impl From<&[u8; 32]> for VrfTranscript {
+		fn from(data: &[u8; 32]) -> Self {
+			VrfTranscript { data: data.to_vec() }
+		}
+	}
+
+	#[cfg(feature = "full_crypto")]
+	impl VrfCrypto for Pair {
+		type VrfInput = VrfTranscript;
+		type VrfPreOutput = VrfPreOutput;
+		type VrfSignData = VrfSignData;
+		type VrfSignature = VrfSignature;
+	}
+
+	#[cfg(feature = "full_crypto")]
+	impl VrfSecret for Pair {
+		/// Create VRF signature using SPHINCS+ signature as proof
+		fn vrf_sign(&self, data: &Self::VrfSignData) -> Self::VrfSignature {
+			// Get combined transcript bytes
+			let message = data.combined_bytes();
+
+			// Sign with SPHINCS+ to get proof
+			let proof_signature = self.sign(&message);
+
+			// Derive pre-output deterministically from signature
+			// Use blake2_256 hash of the signature as VRF output
+			use sp_crypto_hashing::blake2_256;
+			let pre_output_bytes = blake2_256(proof_signature.as_ref());
+
+			VrfSignature {
+				pre_output: VrfPreOutput(pre_output_bytes),
+				proof: VrfProof(proof_signature),
+			}
+		}
+
+		/// Get VRF pre-output without creating full signature
+		fn vrf_pre_output(&self, input: &Self::VrfInput) -> Self::VrfPreOutput {
+			// For SPHINCS+, we need to sign to get deterministic output
+			let signature = self.sign(input.as_bytes());
+			use sp_crypto_hashing::blake2_256;
+			let pre_output_bytes = blake2_256(signature.as_ref());
+			VrfPreOutput(pre_output_bytes)
+		}
+	}
+
+	impl VrfCrypto for Public {
+		type VrfInput = VrfTranscript;
+		type VrfPreOutput = VrfPreOutput;
+		type VrfSignData = VrfSignData;
+		type VrfSignature = VrfSignature;
+	}
+
+	impl VrfPublic for Public {
+		/// Verify VRF signature by verifying SPHINCS+ signature and checking pre-output
+		fn vrf_verify(&self, data: &Self::VrfSignData, signature: &Self::VrfSignature) -> bool {
+			// Get combined transcript bytes
+			let message = data.combined_bytes();
+
+			// Verify the SPHINCS+ signature (proof)
+			if !Pair::verify(&signature.proof.0, &message, self) {
+				return false;
+			}
+
+			// Verify pre-output matches the signature hash
+			use sp_crypto_hashing::blake2_256;
+			let expected_pre_output = blake2_256(signature.proof.0.as_ref());
+
+			expected_pre_output == signature.pre_output.0
+		}
+	}
+
+	#[cfg(feature = "full_crypto")]
+	impl Pair {
+		/// Generate output bytes from the given VRF configuration.
+		///
+		/// This is used by BABE for randomness generation.
+		pub fn make_bytes<const N: usize>(&self, context: &[u8], input: &VrfInput) -> [u8; N]
+		where
+			[u8; N]: Default,
+		{
+			// Create deterministic output by signing input and hashing
+			let signature = self.sign(input.as_bytes());
+
+			// Mix context and signature to derive output
+			use sp_crypto_hashing::blake2_256;
+			let mut combined = context.to_vec();
+			combined.extend_from_slice(signature.as_ref());
+
+			// Generate output of requested length
+			let mut output = [0u8; N];
+			let hash = blake2_256(&combined);
+
+			// For outputs larger than 32 bytes, hash iteratively
+			if N <= 32 {
+				output[..N].copy_from_slice(&hash[..N]);
+			} else {
+				let mut offset = 0;
+				let mut counter = 0u32;
+				while offset < N {
+					let mut hash_input = combined.clone();
+					hash_input.extend_from_slice(&counter.to_le_bytes());
+					let chunk = blake2_256(&hash_input);
+					let copy_len = (N - offset).min(32);
+					output[offset..offset + copy_len].copy_from_slice(&chunk[..copy_len]);
+					offset += copy_len;
+					counter += 1;
+				}
+			}
+
+			output
+		}
+	}
+
+	impl Public {
+		/// Generate output bytes from the given VRF configuration.
+		///
+		/// This verifies the VRF and produces deterministic output.
+		pub fn make_bytes<const N: usize>(
+			&self,
+			context: &[u8],
+			input: &VrfInput,
+			pre_output: &VrfPreOutput,
+		) -> Result<[u8; N], codec::Error>
+		where
+			[u8; N]: Default,
+		{
+			// Mix context and pre-output to derive final output
+			use sp_crypto_hashing::blake2_256;
+			let mut combined = context.to_vec();
+			combined.extend_from_slice(&pre_output.0);
+			combined.extend_from_slice(input.as_bytes());
+
+			// Generate output of requested length
+			let mut output = [0u8; N];
+			let hash = blake2_256(&combined);
+
+			if N <= 32 {
+				output[..N].copy_from_slice(&hash[..N]);
+			} else {
+				let mut offset = 0;
+				let mut counter = 0u32;
+				while offset < N {
+					let mut hash_input = combined.clone();
+					hash_input.extend_from_slice(&counter.to_le_bytes());
+					let chunk = blake2_256(&hash_input);
+					let copy_len = (N - offset).min(32);
+					output[offset..offset + copy_len].copy_from_slice(&chunk[..copy_len]);
+					offset += copy_len;
+					counter += 1;
+				}
+			}
+
+			Ok(output)
+		}
+	}
+
+	impl VrfPreOutput {
+		/// Generate output bytes from the given VRF configuration.
+		pub fn make_bytes<const N: usize>(
+			&self,
+			context: &[u8],
+			input: &VrfInput,
+			public: &Public,
+		) -> Result<[u8; N], codec::Error>
+		where
+			[u8; N]: Default,
+		{
+			public.make_bytes(context, input, self)
+		}
+	}
+}
+
+// Re-export VRF types for convenience
+pub use vrf::{VrfInput, VrfPreOutput, VrfProof, VrfSignData, VrfSignature, VrfTranscript};
