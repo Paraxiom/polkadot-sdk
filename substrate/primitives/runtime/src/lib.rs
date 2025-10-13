@@ -375,8 +375,8 @@ impl traits::IdentifyAccount for MultiSigner {
 	type AccountId = AccountId32;
 	fn into_account(self) -> AccountId32 {
 		match self {
-			// QUANTUM-SAFETY: Only SphincsPlus is supported
-			Self::SphincsPlus(who) => sp_io::hashing::blake2_256(who.as_ref()).into(),
+			// QUANTUM-SAFETY: Only SphincsPlus is supported, using SHA3 (Keccak-256)
+			Self::SphincsPlus(who) => sp_io::hashing::keccak_256(who.as_ref()).into(),
 		}
 	}
 }
