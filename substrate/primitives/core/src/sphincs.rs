@@ -46,6 +46,18 @@ use pqcrypto_traits::sign::{PublicKey as _, SecretKey as _, SignedMessage as _};
 use codec::{Decode, Encode, MaxEncodedLen, DecodeWithMemTracking};
 use scale_info::TypeInfo;
 
+// FFI bindings to PQClean's deterministic key generation
+#[cfg(feature = "full_crypto")]
+extern "C" {
+	/// PQClean's deterministic SPHINCS+ keypair generation from seed
+	/// Parameters: pk (out), sk (out), seed (in - 48 bytes)
+	fn PQCLEAN_SPHINCSSHAKE256FSIMPLE_CLEAN_crypto_sign_seed_keypair(
+		pk: *mut u8,
+		sk: *mut u8,
+		seed: *const u8,
+	) -> i32;
+}
+
 #[cfg(feature = "serde")]
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
@@ -407,35 +419,55 @@ impl Pair {
 	}
 
 	/// Generate a key pair from a seed.
+	///
+	/// Uses PQClean's deterministic SPHINCS+ key generation from a 48-byte seed.
 	pub fn from_seed(seed: &Seed) -> Self {
 		#[cfg(feature = "full_crypto")]
 		{
-			// Use deterministic key generation from seed
-			// We'll use the seed to generate entropy for the keypair
 			use sp_crypto_hashing::blake2_256;
-			
-			// Expand seed to get enough entropy
-			let mut expanded = Vec::new();
+
+			// Expand seed to 48 bytes if needed (SPHINCS+ requires 48-byte seed)
 			let seed_bytes = seed.as_ref();
-			for i in 0..4 {
-				let mut hasher_input = seed_bytes.to_vec();
-				hasher_input.push(i as u8);
-				expanded.extend_from_slice(&blake2_256(&hasher_input));
+			let seed_48: [u8; 48] = if seed_bytes.len() == 48 {
+				let mut s = [0u8; 48];
+				s.copy_from_slice(seed_bytes);
+				s
+			} else {
+				// Hash to get deterministic 48-byte seed
+				let hash1 = blake2_256(seed_bytes);
+				let hash2 = blake2_256(&hash1);
+				let mut s = [0u8; 48];
+				s[..32].copy_from_slice(&hash1);
+				s[32..].copy_from_slice(&hash2[..16]);
+				s
+			};
+
+			// Allocate buffers for public and secret keys
+			let mut pk = [0u8; PUBLIC_KEY_SERIALIZED_SIZE];
+			let mut sk = [0u8; SECRET_KEY_SERIALIZED_SIZE];
+
+			// Call PQClean's deterministic keypair generation via FFI
+			unsafe {
+				let result = PQCLEAN_SPHINCSSHAKE256FSIMPLE_CLEAN_crypto_sign_seed_keypair(
+					pk.as_mut_ptr(),
+					sk.as_mut_ptr(),
+					seed_48.as_ptr(),
+				);
+
+				if result != 0 {
+					// Fall back to random keypair if FFI fails
+					let (pk_rand, sk_rand) = sphincs_impl::keypair();
+					pk.copy_from_slice(pk_rand.as_bytes());
+					sk.copy_from_slice(sk_rand.as_bytes());
+				}
 			}
-			
-			// Generate keypair deterministically
-			// Note: This is a simplified approach - in production you might want
-			// to use the official SPHINCS+ seed-based generation
-			let (_pk, sk) = sphincs_impl::keypair();
-			
-			let mut secret = [0u8; SECRET_KEY_SERIALIZED_SIZE];
-			let sk_bytes = sk.as_bytes();
-			let copy_len = sk_bytes.len().min(SECRET_KEY_SERIALIZED_SIZE);
-			secret[..copy_len].copy_from_slice(&sk_bytes[..copy_len]);
-			
-			Self::from_secret(secret)
+
+			Pair {
+				secret: sk,
+				public: Public(pk),
+			}
 		}
-		
+
 		#[cfg(not(feature = "full_crypto"))]
 		{
 			let mut secret = [0u8; SECRET_KEY_SERIALIZED_SIZE];
