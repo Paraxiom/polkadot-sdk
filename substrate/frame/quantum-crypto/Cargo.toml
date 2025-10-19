@@ -9,6 +9,7 @@ repository.workspace = true
 [dependencies]
 codec = { workspace = true, features = ["derive", "max-encoded-len"] }
 scale-info = { workspace = true, features = ["derive"] }
+serde = { features = ["derive"], workspace = true, optional = true }
 
 # Substrate
 frame-support = { workspace = true, default-features = false }
@@ -30,6 +31,12 @@ sha3 = { version = "0.10", default-features = false }
 pqcrypto-sphincsplus = { version = "0.7", optional = true, default-features = false }
 pqcrypto-falcon = { version = "0.3", optional = true, default-features = false }
 pqcrypto-traits = { version = "0.3", optional = true, default-features = false }
+# SPQR (Sparse Post-Quantum Ratchet) - Pure Post-Quantum Version
+# Using ML-KEM-1024 (Kyber), Falcon1024, and Reed-Solomon for confidential entropy submission
+# NO classical cryptography - fully quantum-safe end-to-end
+pqc_kyber = { version = "0.7", optional = true, default-features = false }
+reed-solomon-erasure = { version = "6.0", optional = true, default-features = false }
+# x25519-dalek REMOVED - this is a full PQC/QKD platform, no classical ECDH
 # rand_chacha removed - we use quantum RNG from KIRQ
 
 # Logging
@@ -48,6 +55,7 @@ default = ["std"]
 std = [
     "codec/std",
     "scale-info/std",
+    "serde",
     "frame-support/std",
     "frame-system/std",
     "sp-runtime/std",
@@ -64,8 +72,11 @@ std = [
     "pqcrypto-sphincsplus?/std",
     "pqcrypto-falcon?/std",
     "pqcrypto-traits?/std",
+    "pqc_kyber?/std",
+    "reed-solomon-erasure?/std",
 ]
 full_crypto = ["pqcrypto-sphincsplus", "pqcrypto-falcon", "pqcrypto-traits"]
+spqr = ["pqc_kyber", "pqcrypto-falcon", "reed-solomon-erasure"]
 runtime-benchmarks = [
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",

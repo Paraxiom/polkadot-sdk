@@ -28,9 +28,11 @@ pub mod pallet {
     use super::*;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
-    use sp_std::{vec::Vec, collections::btree_map::BTreeMap};
+    use sp_std::vec::Vec;
     use sp_core::H256;
     use frame_support::traits::Currency;
+    use sp_runtime::traits::SaturatedConversion;
+    use log::info;
     
     #[pallet::pallet]
     pub struct Pallet<T>(_);
@@ -225,7 +227,55 @@ pub mod pallet {
     //         NetworkHarmonicState::<T>::put(&self.initial_harmonic_state);
     //     }
     // }
-    
+
+    #[pallet::hooks]
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+        fn on_finalize(block_number: BlockNumberFor<T>) {
+            // Collect reporter information from quantum-crypto pallet
+            let mut reporter_info_parts: Vec<&str> = Vec::new();
+
+            // Get entropy pool info
+            let entropy_pool = pallet_quantum_crypto::EntropyPoolStorage::<T>::get();
+            if entropy_pool.entropy.len() > 0 {
+                reporter_info_parts.push("QRNG");
+            }
+
+            // Get network QBER
+            if let Some(qber) = pallet_quantum_crypto::Pallet::<T>::calculate_network_qber() {
+                reporter_info_parts.push("QBER");
+            }
+
+            // Check for QKD keys
+            let has_qkd = !pallet_quantum_crypto::SecureQkdKeys::<T>::iter().next().is_none();
+            if has_qkd {
+                reporter_info_parts.push("QKD");
+            }
+
+            // Check for authorized reporters
+            let reporter_count = pallet_quantum_crypto::AuthorizedReporters::<T>::iter().count();
+
+            // Log finalization candidate with reporter info
+            if !reporter_info_parts.is_empty() {
+                let sources = reporter_info_parts.join("+");
+                info!(
+                    "finalization candidate #{}: reporters={}, sources=[{}]",
+                    block_number.saturated_into::<u64>(),
+                    reporter_count,
+                    sources
+                );
+            } else {
+                info!(
+                    "finalization candidate #{}: reporters={}, sources=[none]",
+                    block_number.saturated_into::<u64>(),
+                    reporter_count
+                );
+            }
+
+            // Update last finalized block
+            LastFinalizedBlock::<T>::put(block_number);
+        }
+    }
+
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Register as a validator (requires quantum hardware)

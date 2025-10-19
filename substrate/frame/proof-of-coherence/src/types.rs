@@ -1,8 +1,13 @@
 //! Types for Proof of Coherence consensus
+//!
+//! This module contains two sets of types:
+//! 1. Original coherence proof types (frequency-based)
+//! 2. Quantum coherence voting types (STARK proof-based finality)
 
 use codec::{Encode, Decode};
 use scale_info::TypeInfo;
 use sp_core::H256;
+use sp_std::vec::Vec;
 use frame_support::pallet_prelude::*;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -27,4 +32,162 @@ pub struct HarmonicState {
     pub phase_offset: u32,
     pub coherence_level: u8,
     pub resonance_nodes: u8,
+}
+
+// ============================================================================
+// Quantum Coherence Finality Types (GRANDPA Equivalent)
+// ============================================================================
+
+/// A vote in the quantum coherence consensus protocol (GRANDPA equivalent)
+///
+/// This is the quantum equivalent of a GRANDPA vote. Each validator:
+/// 1. Verifies STARK proofs from reporters
+/// 2. Calculates coherence score based on QBER measurements
+/// 3. Signs the vote with Falcon1024
+/// 4. Broadcasts to other validators
+#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq)]
+#[scale_info(skip_type_params(AccountId, BlockNumber, Hash))]
+#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
+pub struct CoherenceVote<AccountId, BlockNumber, Hash> {
+    /// The validator casting this vote
+    pub validator: AccountId,
+
+    /// Block being voted on
+    pub block_hash: Hash,
+    pub block_number: BlockNumber,
+
+    /// Validator's calculated coherence score for this block
+    ///
+    /// Score = Σ(1000 / (1 + QBER_i)) for all valid proofs in this block
+    ///
+    /// Higher score = better quantum quality
+    /// Minimum threshold: Set by governance (typically 5000 for 6+ reporters)
+    pub coherence_score: u64,
+
+    /// Validator's view of the quantum state at this block
+    pub quantum_state: QuantumState,
+
+    /// Falcon1024 signature over:
+    /// hash(validator || block_hash || block_number || coherence_score || quantum_state)
+    pub signature: Vec<u8>,
+
+    /// Vote type (Prevote or Precommit)
+    pub vote_type: VoteType,
+}
+
+/// Type of vote in the two-round protocol (like GRANDPA)
+#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
+pub enum VoteType {
+    /// First round: "I have verified the STARK proofs"
+    Prevote,
+
+    /// Second round: "I commit to finalizing this block"
+    Precommit,
+}
+
+/// Validator's view of quantum state at a specific block
+#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
+pub struct QuantumState {
+    /// Number of valid STARK proofs seen by this validator
+    pub valid_proofs: u32,
+
+    /// Number of proofs rejected (invalid STARK, high QBER, etc.)
+    pub rejected_proofs: u32,
+
+    /// Average QBER across all valid proofs (scaled by 10,000)
+    pub average_qber: u32,
+
+    /// Hash of the entropy pool after applying this block's quantum measurements
+    pub entropy_pool_hash: H256,
+
+    /// Number of unique reporters who submitted proofs
+    pub reporter_count: u32,
+
+    /// Minimum QBER seen across all proofs (scaled by 10,000)
+    pub min_qber: u32,
+
+    /// Maximum QBER seen across all proofs (scaled by 10,000)
+    pub max_qber: u32,
+}
+
+/// Finality certificate issued when >2/3 validators agree (GRANDPA equivalent)
+#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq)]
+#[scale_info(skip_type_params(AccountId, BlockNumber, Hash))]
+#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
+pub struct FinalityCertificate<AccountId, BlockNumber, Hash> {
+    /// Block being finalized
+    pub block_hash: Hash,
+    pub block_number: BlockNumber,
+
+    /// All precommit votes from validators (must be >2/3 of total)
+    pub precommit_votes: Vec<CoherenceVote<AccountId, BlockNumber, Hash>>,
+
+    /// Aggregated quantum state (consensus view)
+    pub consensus_quantum_state: QuantumState,
+
+    /// Total coherence score (sum of all validator scores)
+    pub total_coherence_score: u64,
+
+    /// Number of validators who signed (must be >2/3)
+    pub validator_count: u32,
+
+    /// Timestamp when certificate was created (Unix milliseconds)
+    pub timestamp: u64,
+}
+
+/// Result of vote verification
+#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Debug))]
+pub enum VoteVerificationResult {
+    /// Vote is valid
+    Valid,
+
+    /// Falcon1024 signature verification failed
+    InvalidSignature,
+
+    /// Validator is not in the validator set
+    UnknownValidator,
+
+    /// Vote is for a block that doesn't exist
+    UnknownBlock,
+
+    /// Coherence score doesn't match validator's quantum state
+    InconsistentState,
+
+    /// Vote type is wrong for current round
+    WrongVoteType,
+
+    /// Duplicate vote from same validator
+    DuplicateVote,
+}
+
+/// Set of validators authorized to vote (GRANDPA VoterSet equivalent)
+#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq)]
+#[scale_info(skip_type_params(AccountId))]
+#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
+pub struct ValidatorSet<AccountId> {
+    /// Validators and their Falcon1024 public keys
+    pub validators: Vec<(AccountId, Vec<u8>)>,
+
+    /// Set ID (incremented each time validator set changes)
+    pub set_id: u64,
+
+    /// Minimum number of validators required for supermajority
+    ///
+    /// supermajority_threshold = (validators.len() * 2) / 3 + 1
+    pub supermajority_threshold: u32,
+}
+
+impl<AccountId> ValidatorSet<AccountId> {
+    /// Check if we have >2/3 validators
+    pub fn has_supermajority(&self, vote_count: u32) -> bool {
+        vote_count >= self.supermajority_threshold
+    }
+
+    /// Get total number of validators
+    pub fn total_validators(&self) -> u32 {
+        self.validators.len() as u32
+    }
 }

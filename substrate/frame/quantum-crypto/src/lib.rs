@@ -22,17 +22,21 @@ mod quantum_vrf;
 mod quantum_event_submitter;
 mod authorized_reporter;
 pub mod pqc_signatures;
+pub mod stark_proof;
 
 use qber_stark::{QberStark, QberProof, QberPublicInputs};
 pub use quantum_merkle::{QuantumMerkleTree, QuantumMerkleProof, QuantumStateTree};
 pub use quantum_rng::{QuantumRng, QuantumRngSource, QuantumOsRng};
 pub use quantum_rng_provider::{QuantumRngProvider, QuantumRngAdapter};
 pub use double_ratchet_lamport::{
-    LamportKeyPair, LamportSignature, DoubleRatchetState, 
+    LamportKeyPair, LamportSignature, DoubleRatchetState,
     RatchetMessage, MessageHeader, DoubleRatchetError,
     verify_lamport_signature, create_entropy_source
 };
 pub use authorized_reporter::{ReporterInfo, ReporterStatus};
+pub use stark_proof::{
+    QuantumEntropyProof, PublicInputs, ProofVerificationResult, AggregatedQuantumProof
+};
 
 #[cfg(test)]
 mod stark_integration_test;
@@ -65,29 +69,29 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-        
+
         /// Source of randomness for VRF
         type MyRandomness: frame_support::traits::Randomness<Self::Hash, BlockNumberFor<Self>>;
-        
+
         /// Maximum entropy pool size
         #[pallet::constant]
-        type MaxEntropyPoolSize: Get<u32> + Clone + Eq + core::fmt::Debug + TypeInfo;
-        
+        type MaxEntropyPoolSize: Get<u32>;
+
         /// QKD endpoint configuration (for off-chain workers)
         type QkdEndpoint: Get<Option<Vec<u8>>>;
-        
+
         /// Minimum QBER for secure key generation (as percentage * 100)
         #[pallet::constant]
         type MinSecureQber: Get<u32>; // e.g., 1100 = 11%
-        
+
         /// Maximum measurements per proof
         #[pallet::constant]
         type MaxMeasurementsPerProof: Get<u32>;
-        
+
         /// Maximum size of a STARK proof
         #[pallet::constant]
         type MaxProofSize: Get<u32>;
-        
+
         /// Maximum size of hardware certificates
         #[pallet::constant]
         type MaxCertificateSize: Get<u32>;

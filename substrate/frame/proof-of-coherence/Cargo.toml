@@ -22,6 +22,9 @@ sp-io = { workspace = true }
 # Quantum
 pallet-quantum-crypto = { path = "../quantum-crypto", default-features = false }
 
+# Logging
+log = { workspace = true }
+
 # Consensus (using sp-runtime instead)
 
 [dev-dependencies]
@@ -42,6 +45,7 @@ std = [
     "sp-core/std",
     "sp-io/std",
     "pallet-quantum-crypto/std",
+    "log/std",
 ]
 runtime-benchmarks = [
     "frame-support/runtime-benchmarks",
