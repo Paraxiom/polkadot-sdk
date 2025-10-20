@@ -8,9 +8,24 @@ use codec::{Encode, Decode};
 use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_std::vec::Vec;
-use frame_support::pallet_prelude::*;
+use frame_support::{
+	pallet_prelude::*,
+	BoundedVec,
+};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+
+// ============================================================================
+// Constants for BoundedVec sizes
+// ============================================================================
+
+/// Maximum size of Falcon1024 signature (in bytes)
+/// Falcon1024 signatures are approximately 1,280 bytes
+pub const MAX_SIGNATURE_SIZE: u32 = 1_500;
+
+/// Maximum number of votes in a finality certificate
+/// Should accommodate largest expected validator set
+pub const MAX_VOTES_PER_CERTIFICATE: u32 = 100;
 
 /// Coherence proof structure
 #[derive(Clone, Encode, Decode, TypeInfo, MaxEncodedLen)]
@@ -45,7 +60,7 @@ pub struct HarmonicState {
 /// 2. Calculates coherence score based on QBER measurements
 /// 3. Signs the vote with Falcon1024
 /// 4. Broadcasts to other validators
-#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq)]
+#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq, MaxEncodedLen)]
 #[scale_info(skip_type_params(AccountId, BlockNumber, Hash))]
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 pub struct CoherenceVote<AccountId, BlockNumber, Hash> {
@@ -69,14 +84,14 @@ pub struct CoherenceVote<AccountId, BlockNumber, Hash> {
 
     /// Falcon1024 signature over:
     /// hash(validator || block_hash || block_number || coherence_score || quantum_state)
-    pub signature: Vec<u8>,
+    pub signature: BoundedVec<u8, ConstU32<MAX_SIGNATURE_SIZE>>,
 
     /// Vote type (Prevote or Precommit)
     pub vote_type: VoteType,
 }
 
 /// Type of vote in the two-round protocol (like GRANDPA)
-#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq)]
+#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 pub enum VoteType {
     /// First round: "I have verified the STARK proofs"
@@ -87,7 +102,7 @@ pub enum VoteType {
 }
 
 /// Validator's view of quantum state at a specific block
-#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq)]
+#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 pub struct QuantumState {
     /// Number of valid STARK proofs seen by this validator
@@ -113,7 +128,7 @@ pub struct QuantumState {
 }
 
 /// Finality certificate issued when >2/3 validators agree (GRANDPA equivalent)
-#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq)]
+#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq, MaxEncodedLen)]
 #[scale_info(skip_type_params(AccountId, BlockNumber, Hash))]
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 pub struct FinalityCertificate<AccountId, BlockNumber, Hash> {
@@ -122,7 +137,7 @@ pub struct FinalityCertificate<AccountId, BlockNumber, Hash> {
     pub block_number: BlockNumber,
 
     /// All precommit votes from validators (must be >2/3 of total)
-    pub precommit_votes: Vec<CoherenceVote<AccountId, BlockNumber, Hash>>,
+    pub precommit_votes: BoundedVec<CoherenceVote<AccountId, BlockNumber, Hash>, ConstU32<MAX_VOTES_PER_CERTIFICATE>>,
 
     /// Aggregated quantum state (consensus view)
     pub consensus_quantum_state: QuantumState,

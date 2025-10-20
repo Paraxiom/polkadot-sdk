@@ -133,11 +133,9 @@ pub mod pallet {
     /// Finality certificates indexed by block number
     /// Stores the complete certificate for each finalized block
     ///
-    /// Note: We use OptionQuery here since FinalityCertificate contains Vec fields
-    /// that cannot implement MaxEncodedLen. For production, these should be BoundedVec.
+    /// Phase 4: Now uses BoundedVec for all fields, enabling proper MaxEncodedLen
     #[pallet::storage]
     #[pallet::getter(fn finality_certificates)]
-    #[pallet::unbounded]
     pub type FinalityCertificates<T: Config> = StorageMap<
         _,
         Blake2_128Concat,
@@ -519,42 +517,40 @@ pub mod pallet {
             Ok(())
         }
 
-        // TODO Phase 4: Uncomment when we implement BoundedVec for certificate fields
+        // Phase 4 Progress: BoundedVec implementation complete!
         //
-        // /// Submit finality certificate for a block (called by coherence gadget)
-        // ///
-        // /// This extrinsic stores the finality certificate on-chain, providing
-        // /// permanent proof that >2/3 validators agreed on the block's quantum state.
+        // TODO Phase 5: Implement as unsigned transaction (like GRANDPA finality proofs)
+        //
+        // The FinalityCertificate type now properly uses BoundedVec and implements MaxEncodedLen.
+        // However, Substrate runtime Call enum requires DecodeWithMemTracking for all parameters.
+        // Large complex structures like FinalityCertificate should be submitted as unsigned
+        // transactions using ValidateUnsigned trait (similar to GRANDPA's finality proofs).
+        //
+        // For Phase 4, the types compile correctly and can be stored in storage. The gadget
+        // creates valid certificates with BoundedVec. Phase 5 will add unsigned tx submission.
+        //
+        // /// Submit finality certificate for a block (via unsigned transaction)
         // #[pallet::call_index(5)]
         // #[pallet::weight(Weight::from_parts(500_000, 0))]
         // pub fn submit_finality_certificate(
         //     origin: OriginFor<T>,
         //     certificate: FinalityCertificate<T::AccountId, BlockNumberFor<T>, T::Hash>,
         // ) -> DispatchResult {
-        //     // For Phase 3: Allow any validator to submit (later: require validator signature)
-        //     let _who = ensure_signed(origin)?;
+        //     ensure_none(origin)?; // Unsigned transaction
         //
-        //     // Validate certificate
-        //     ensure!(
-        //         certificate.validator_count >= 1,
-        //         Error::<T>::InsufficientCoherence
-        //     );
+        //     // Validate certificate (check signatures, supermajority, etc.)
+        //     ensure!(certificate.validator_count >= 1, Error::<T>::InsufficientCoherence);
         //
         //     // Store certificate on-chain
         //     FinalityCertificates::<T>::insert(certificate.block_number, certificate.clone());
-        //
-        //     // Update last finalized block
         //     LastFinalizedBlock::<T>::put(certificate.block_number);
         //
-        //     // Emit event
         //     Self::deposit_event(Event::FinalityCertificateSubmitted {
         //         block_number: certificate.block_number,
         //         block_hash: certificate.block_hash,
         //         validator_count: certificate.validator_count,
         //         total_coherence_score: certificate.total_coherence_score,
         //     });
-        //
-        //     info!("📜 Finality certificate stored on-chain for block #{:?}", certificate.block_number);
         //
         //     Ok(())
         // }
