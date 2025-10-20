@@ -11,7 +11,7 @@ pub use pallet::*;
 pub use types::{CoherenceProof, HarmonicState};
 use types::*;
 
-mod types;
+pub mod types;
 mod consensus;
 // mod authoring; // TODO: Add back when consensus integration is needed
 
@@ -129,6 +129,22 @@ pub mod pallet {
         u8,
         ValueQuery,
     >;
+
+    /// Finality certificates indexed by block number
+    /// Stores the complete certificate for each finalized block
+    ///
+    /// Note: We use OptionQuery here since FinalityCertificate contains Vec fields
+    /// that cannot implement MaxEncodedLen. For production, these should be BoundedVec.
+    #[pallet::storage]
+    #[pallet::getter(fn finality_certificates)]
+    #[pallet::unbounded]
+    pub type FinalityCertificates<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        BlockNumberFor<T>,
+        FinalityCertificate<T::AccountId, BlockNumberFor<T>, T::Hash>,
+        OptionQuery,
+    >;
     
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -185,6 +201,14 @@ pub mod pallet {
             producer: T::AccountId,
             coherence_score: u32,
             block_number: BlockNumberFor<T>,
+        },
+
+        /// Finality certificate submitted and stored on-chain
+        FinalityCertificateSubmitted {
+            block_number: BlockNumberFor<T>,
+            block_hash: T::Hash,
+            validator_count: u32,
+            total_coherence_score: u64,
         },
     }
     
@@ -491,9 +515,49 @@ pub mod pallet {
                 coherent_validators,
                 network_coherence: harmonic_state.coherence_level,
             });
-            
+
             Ok(())
         }
+
+        // TODO Phase 4: Uncomment when we implement BoundedVec for certificate fields
+        //
+        // /// Submit finality certificate for a block (called by coherence gadget)
+        // ///
+        // /// This extrinsic stores the finality certificate on-chain, providing
+        // /// permanent proof that >2/3 validators agreed on the block's quantum state.
+        // #[pallet::call_index(5)]
+        // #[pallet::weight(Weight::from_parts(500_000, 0))]
+        // pub fn submit_finality_certificate(
+        //     origin: OriginFor<T>,
+        //     certificate: FinalityCertificate<T::AccountId, BlockNumberFor<T>, T::Hash>,
+        // ) -> DispatchResult {
+        //     // For Phase 3: Allow any validator to submit (later: require validator signature)
+        //     let _who = ensure_signed(origin)?;
+        //
+        //     // Validate certificate
+        //     ensure!(
+        //         certificate.validator_count >= 1,
+        //         Error::<T>::InsufficientCoherence
+        //     );
+        //
+        //     // Store certificate on-chain
+        //     FinalityCertificates::<T>::insert(certificate.block_number, certificate.clone());
+        //
+        //     // Update last finalized block
+        //     LastFinalizedBlock::<T>::put(certificate.block_number);
+        //
+        //     // Emit event
+        //     Self::deposit_event(Event::FinalityCertificateSubmitted {
+        //         block_number: certificate.block_number,
+        //         block_hash: certificate.block_hash,
+        //         validator_count: certificate.validator_count,
+        //         total_coherence_score: certificate.total_coherence_score,
+        //     });
+        //
+        //     info!("📜 Finality certificate stored on-chain for block #{:?}", certificate.block_number);
+        //
+        //     Ok(())
+        // }
     }
     
     // Helper functions
