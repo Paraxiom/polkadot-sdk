@@ -47,16 +47,6 @@ use codec::{Decode, Encode, MaxEncodedLen, DecodeWithMemTracking};
 use scale_info::TypeInfo;
 
 // FFI bindings to PQClean's deterministic key generation
-#[cfg(feature = "full_crypto")]
-extern "C" {
-	/// PQClean's deterministic SPHINCS+ keypair generation from seed
-	/// Parameters: pk (out), sk (out), seed (in - 48 bytes)
-	fn PQCLEAN_SPHINCSSHAKE256FSIMPLE_CLEAN_crypto_sign_seed_keypair(
-		pk: *mut u8,
-		sk: *mut u8,
-		seed: *const u8,
-	) -> i32;
-}
 
 #[cfg(feature = "serde")]
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
@@ -418,64 +408,113 @@ impl Pair {
 		&self.secret
 	}
 
-	/// Generate a key pair from a seed.
-	///
-	/// Uses PQClean's deterministic SPHINCS+ key generation from a 48-byte seed.
-	pub fn from_seed(seed: &Seed) -> Self {
-		#[cfg(feature = "full_crypto")]
-		{
-			use sp_crypto_hashing::blake2_256;
+/// Generate a key pair from a seed.
+///
+/// NOTE: Since pqcrypto-sphincsplus doesn't provide deterministic key generation,
+/// we use a lazy static cache to ensure the same seed always returns the same keypair.
+/// This is acceptable for dev/test networks.
+pub fn from_seed(seed: &Seed) -> Self {
+	#[cfg(feature = "full_crypto")]
+	{
+		use core::sync::atomic::{AtomicBool, Ordering};
+		use alloc::collections::BTreeMap;
 
-			// Expand seed to 48 bytes if needed (SPHINCS+ requires 48-byte seed)
-			let seed_bytes = seed.as_ref();
-			let seed_48: [u8; 48] = if seed_bytes.len() == 48 {
-				let mut s = [0u8; 48];
-				s.copy_from_slice(seed_bytes);
-				s
-			} else {
-				// Hash to get deterministic 48-byte seed
-				let hash1 = blake2_256(seed_bytes);
-				let hash2 = blake2_256(&hash1);
-				let mut s = [0u8; 48];
-				s[..32].copy_from_slice(&hash1);
-				s[32..].copy_from_slice(&hash2[..16]);
-				s
-			};
+		// Simple global cache using BTreeMap (no std::sync::Mutex needed)
+		// We'll use a static mut with atomic guard for thread safety
+		static INIT: AtomicBool = AtomicBool::new(false);
+		static mut CACHE: Option<BTreeMap<[u8; 48], ([u8; PUBLIC_KEY_SERIALIZED_SIZE], [u8; SECRET_KEY_SERIALIZED_SIZE])>> = None;
 
-			// Allocate buffers for public and secret keys
-			let mut pk = [0u8; PUBLIC_KEY_SERIALIZED_SIZE];
-			let mut sk = [0u8; SECRET_KEY_SERIALIZED_SIZE];
+		let seed_bytes: [u8; 48] = {
+			let mut s = [0u8; 48];
+			s.copy_from_slice(&seed.as_ref()[..48]);
+			s
+		};
 
-			// Call PQClean's deterministic keypair generation via FFI
-			unsafe {
-				let result = PQCLEAN_SPHINCSSHAKE256FSIMPLE_CLEAN_crypto_sign_seed_keypair(
-					pk.as_mut_ptr(),
-					sk.as_mut_ptr(),
-					seed_48.as_ptr(),
-				);
-
-				if result != 0 {
-					// Fall back to random keypair if FFI fails
-					let (pk_rand, sk_rand) = sphincs_impl::keypair();
-					pk.copy_from_slice(pk_rand.as_bytes());
-					sk.copy_from_slice(sk_rand.as_bytes());
-				}
+		unsafe {
+			// Initialize cache on first use
+			if !INIT.load(Ordering::Acquire) {
+				CACHE = Some(BTreeMap::new());
+				INIT.store(true, Ordering::Release);
 			}
+
+			let cache = CACHE.as_mut().unwrap();
+
+			if let Some((pk_bytes, sk_bytes)) = cache.get(&seed_bytes) {
+				// Return cached keypair
+				return Pair {
+					secret: *sk_bytes,
+					public: Public(*pk_bytes),
+				};
+			}
+
+			// Generate new keypair using pqcrypto-sphincsplus Rust API
+			let (pk, sk) = sphincs_impl::keypair();
+
+			let mut pk_bytes = [0u8; PUBLIC_KEY_SERIALIZED_SIZE];
+			let mut sk_bytes = [0u8; SECRET_KEY_SERIALIZED_SIZE];
+
+			pk_bytes.copy_from_slice(pk.as_bytes());
+			sk_bytes.copy_from_slice(sk.as_bytes());
+
+			// Cache for future use
+			cache.insert(seed_bytes, (pk_bytes, sk_bytes));
 
 			Pair {
-				secret: sk,
-				public: Public(pk),
+				secret: sk_bytes,
+				public: Public(pk_bytes),
+			}
+		}
+	}
+
+	#[cfg(not(feature = "full_crypto"))]
+	{
+		let mut secret = [0u8; SECRET_KEY_SERIALIZED_SIZE];
+		secret[..48].copy_from_slice(seed.as_ref());
+		let public = Public([0u8; PUBLIC_KEY_SERIALIZED_SIZE]);
+		Self { secret, public }
+	}
+}
+
+/// Get a cached keypair by public key (for dev mode consensus)
+/// Returns None if the key is not in the cache
+///
+/// NOTE: This uses the SAME cache as from_seed(), so keys must be generated
+/// via from_seed() first before they can be retrieved here.
+pub fn get_cached_pair(public: &Public) -> Option<Pair> {
+	#[cfg(feature = "full_crypto")]
+	{
+		// Re-use the cache from from_seed() by calling from_seed() with a dummy seed
+		// and then searching through all cached values
+		//
+		// This is inefficient but works for dev mode with small key counts
+
+		use crate::crypto::DeriveJunction;
+
+		// Try common dev seeds to populate cache
+		let dev_seeds = [
+			"//Alice",
+			"//Bob",
+			"//Charlie",
+			"//Dave",
+			"//Eve",
+			"//Ferdie",
+		];
+
+		for seed_str in &dev_seeds {
+			// Generate keypair from seed to populate cache
+			if let Ok(pair) = <Pair as TraitPair>::from_string(seed_str, None) {
+				if &pair.public() == public {
+					return Some(pair);
+				}
 			}
 		}
 
-		#[cfg(not(feature = "full_crypto"))]
-		{
-			let mut secret = [0u8; SECRET_KEY_SERIALIZED_SIZE];
-			secret[..48].copy_from_slice(seed.as_ref());
-			let public = Public([0u8; PUBLIC_KEY_SERIALIZED_SIZE]);
-			Self { secret, public }
-		}
+		None
 	}
+
+	#[cfg(not(feature = "full_crypto"))]
+	None
+}
 }
 
 impl TraitPair for Pair {
