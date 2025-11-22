@@ -299,25 +299,24 @@ pub mod pallet {
             // Check for authorized reporters
             let reporter_count = pallet_quantum_crypto::AuthorizedReporters::<T>::iter().count();
 
-            // Log finalization candidate with reporter info
+            // Finalize block using Proof of Coherence (quantum-safe alternative to GRANDPA)
+            LastFinalizedBlock::<T>::put(block_number);
+
+            // Log finalization with quantum reporter status
             if !reporter_info_parts.is_empty() {
                 let sources = reporter_info_parts.join("+");
                 info!(
-                    "finalization candidate #{}: reporters={}, sources=[{}]",
+                    "✨ Finalized #{} (PoC: quantum sources active: [{}], reporters={})",
                     block_number.saturated_into::<u64>(),
-                    reporter_count,
-                    sources
+                    sources,
+                    reporter_count
                 );
             } else {
                 info!(
-                    "finalization candidate #{}: reporters={}, sources=[none]",
-                    block_number.saturated_into::<u64>(),
-                    reporter_count
+                    "✨ Finalized #{} (PoC: simulated mode, no quantum hardware connected)",
+                    block_number.saturated_into::<u64>()
                 );
             }
-
-            // Update last finalized block
-            LastFinalizedBlock::<T>::put(block_number);
         }
     }
 
