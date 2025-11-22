@@ -5,6 +5,8 @@
 //! 2. Quantum coherence voting types (STARK proof-based finality)
 
 use codec::{Encode, Decode};
+#[cfg(not(feature = "std"))]
+use codec::DecodeWithMemTracking;
 use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_std::vec::Vec;
@@ -60,7 +62,7 @@ pub struct HarmonicState {
 /// 2. Calculates coherence score based on QBER measurements
 /// 3. Signs the vote with Falcon1024
 /// 4. Broadcasts to other validators
-#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq, MaxEncodedLen)]
+#[derive(Clone, Encode, Decode, DecodeWithMemTracking, TypeInfo, PartialEq, Eq, MaxEncodedLen)]
 #[scale_info(skip_type_params(AccountId, BlockNumber, Hash))]
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 pub struct CoherenceVote<AccountId, BlockNumber, Hash> {
@@ -91,7 +93,7 @@ pub struct CoherenceVote<AccountId, BlockNumber, Hash> {
 }
 
 /// Type of vote in the two-round protocol (like GRANDPA)
-#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq, MaxEncodedLen)]
+#[derive(Clone, Encode, Decode, DecodeWithMemTracking, TypeInfo, PartialEq, Eq, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 pub enum VoteType {
     /// First round: "I have verified the STARK proofs"
@@ -102,7 +104,7 @@ pub enum VoteType {
 }
 
 /// Validator's view of quantum state at a specific block
-#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq, MaxEncodedLen)]
+#[derive(Clone, Encode, Decode, DecodeWithMemTracking, TypeInfo, PartialEq, Eq, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 pub struct QuantumState {
     /// Number of valid STARK proofs seen by this validator
@@ -128,7 +130,7 @@ pub struct QuantumState {
 }
 
 /// Finality certificate issued when >2/3 validators agree (GRANDPA equivalent)
-#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq, MaxEncodedLen)]
+#[derive(Clone, Encode, Decode, DecodeWithMemTracking, TypeInfo, PartialEq, Eq, MaxEncodedLen)]
 #[scale_info(skip_type_params(AccountId, BlockNumber, Hash))]
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
 pub struct FinalityCertificate<AccountId, BlockNumber, Hash> {
@@ -206,3 +208,16 @@ impl<AccountId> ValidatorSet<AccountId> {
         self.validators.len() as u32
     }
 }
+
+// ============================================================================
+// Note on DecodeWithMemTracking
+// ============================================================================
+//
+// DecodeWithMemTracking is required for types used as extrinsic parameters in the
+// runtime Call enum. Following Substrate's pattern (see per_things.rs), we derive
+// it directly alongside Decode:
+//
+// #[derive(Encode, Decode, DecodeWithMemTracking, TypeInfo, MaxEncodedLen, ...)]
+//
+// This is the same approach used by Percent, Perbill, etc. Our quantum finality
+// types (QuantumState, CoherenceVote, FinalityCertificate) all derive this trait.

@@ -284,7 +284,12 @@ pub async fn build_system_rpc_future<
 				Err(_) => log::error!("`SyncingEngine` shut down"),
 			},
 			sc_rpc::system::Request::LocalPeerId(sender) => {
-				let _ = sender.send(network_service.local_peer_id().to_base58());
+				// Get the peer ID in multiaddr Protocol::P2p format, then extract just the ID part
+				let peer_id = (network_service.local_peer_id()).into();
+				let full_string = format!("{}", sc_network::multiaddr::Protocol::P2p(peer_id));
+				// Strip the "/p2p/" prefix to get just the peer ID
+				let peer_id_string = full_string.strip_prefix("/p2p/").unwrap_or(&full_string).to_string();
+				let _ = sender.send(peer_id_string);
 			},
 			sc_rpc::system::Request::LocalListenAddresses(sender) => {
 				let peer_id = (network_service.local_peer_id()).into();

@@ -471,6 +471,7 @@ impl Discovery {
 	}
 
 	/// Can `address` be added to DHT.
+	/// PATCH: Also allows loopback addresses for local development/testing.
 	fn can_add_to_dht(address: &Multiaddr) -> bool {
 		let ip = match address.iter().next() {
 			Some(Protocol::Ip4(ip)) => IpNetwork::from(ip),
@@ -480,7 +481,8 @@ impl Discovery {
 			_ => return false,
 		};
 
-		ip.is_global()
+		// PATCH: DEV MODE - Allow ALL IPs for local multi-validator testing
+		true  // Accept all addresses (127.0.0.1, 192.168.x.x, same IP different ports)
 	}
 
 	/// Check if `address` can be considered a new external address.

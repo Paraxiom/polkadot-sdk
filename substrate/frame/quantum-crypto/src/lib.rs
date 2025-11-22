@@ -9,6 +9,9 @@
 pub use pallet::*;
 
 // STARK proof components
+#[cfg(feature = "std")]
+pub mod qber_stark;
+#[cfg(not(feature = "std"))]
 mod qber_stark;
 mod quantum_hasher;
 mod quantum_merkle;

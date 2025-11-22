@@ -9,6 +9,7 @@ repository = "https://github.com/paritytech/polkadot-sdk.git"
 resolver = "2"
 
 members = [
+	"codec-quantum",
 	"substrate/bin/quantum-node",
 	"substrate/bin/quantum-node/runtime",
 	"bridges/bin/runtime-common",
@@ -1569,3 +1570,4 @@ zeroize = { opt-level = 3 }
 
 [patch.crates-io]
 # yamux = { path = "/home/paraxiom/yamux-fork/yamux" }
+parity-scale-codec = { path = "codec-quantum" }

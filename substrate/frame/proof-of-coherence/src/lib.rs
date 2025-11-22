@@ -31,7 +31,13 @@ pub mod pallet {
     use sp_std::vec::Vec;
     use sp_core::H256;
     use frame_support::traits::Currency;
-    use sp_runtime::traits::SaturatedConversion;
+    use sp_runtime::{
+        traits::SaturatedConversion,
+        transaction_validity::{
+            InvalidTransaction, TransactionSource, TransactionValidity,
+            TransactionPriority, ValidTransaction,
+        },
+    };
     use log::info;
     
     #[pallet::pallet]
@@ -143,7 +149,24 @@ pub mod pallet {
         FinalityCertificate<T::AccountId, BlockNumberFor<T>, T::Hash>,
         OptionQuery,
     >;
-    
+
+    /// Finality checkpoints (stored via inherents every N blocks)
+    ///
+    /// Phase 6B: Separate storage for checkpoint certificates that are
+    /// stored on-chain via inherents. These provide:
+    /// - Audit trail of finality progression
+    /// - Cross-chain verification proofs
+    /// - Historical finality records
+    #[pallet::storage]
+    #[pallet::getter(fn finality_checkpoints)]
+    pub type FinalityCheckpoints<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        BlockNumberFor<T>,
+        FinalityCertificate<T::AccountId, BlockNumberFor<T>, T::Hash>,
+        OptionQuery,
+    >;
+
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
@@ -517,45 +540,88 @@ pub mod pallet {
             Ok(())
         }
 
-        // Phase 4 Progress: BoundedVec implementation complete!
-        //
-        // TODO Phase 5: Implement as unsigned transaction (like GRANDPA finality proofs)
-        //
-        // The FinalityCertificate type now properly uses BoundedVec and implements MaxEncodedLen.
-        // However, Substrate runtime Call enum requires DecodeWithMemTracking for all parameters.
-        // Large complex structures like FinalityCertificate should be submitted as unsigned
-        // transactions using ValidateUnsigned trait (similar to GRANDPA's finality proofs).
-        //
-        // For Phase 4, the types compile correctly and can be stored in storage. The gadget
-        // creates valid certificates with BoundedVec. Phase 5 will add unsigned tx submission.
-        //
-        // /// Submit finality certificate for a block (via unsigned transaction)
-        // #[pallet::call_index(5)]
-        // #[pallet::weight(Weight::from_parts(500_000, 0))]
-        // pub fn submit_finality_certificate(
-        //     origin: OriginFor<T>,
-        //     certificate: FinalityCertificate<T::AccountId, BlockNumberFor<T>, T::Hash>,
-        // ) -> DispatchResult {
-        //     ensure_none(origin)?; // Unsigned transaction
-        //
-        //     // Validate certificate (check signatures, supermajority, etc.)
-        //     ensure!(certificate.validator_count >= 1, Error::<T>::InsufficientCoherence);
-        //
-        //     // Store certificate on-chain
-        //     FinalityCertificates::<T>::insert(certificate.block_number, certificate.clone());
-        //     LastFinalizedBlock::<T>::put(certificate.block_number);
-        //
-        //     Self::deposit_event(Event::FinalityCertificateSubmitted {
-        //         block_number: certificate.block_number,
-        //         block_hash: certificate.block_hash,
-        //         validator_count: certificate.validator_count,
-        //         total_coherence_score: certificate.total_coherence_score,
-        //     });
-        //
-        //     Ok(())
-        // }
+        /// Submit finality certificate for a block (via unsigned transaction)
+        ///
+        /// Phase 5: ACTIVE! DecodeWithMemTracking works automatically with BoundedVec.
+        ///
+        /// This extrinsic accepts unsigned transactions from the coherence gadget to store
+        /// finality certificates on-chain. Validation is performed in `validate_unsigned`.
+        #[pallet::call_index(5)]
+        #[pallet::weight(Weight::from_parts(500_000, 0))]
+        pub fn submit_finality_certificate(
+            origin: OriginFor<T>,
+            certificate: FinalityCertificate<T::AccountId, BlockNumberFor<T>, T::Hash>,
+        ) -> DispatchResult {
+            // Ensure this is an unsigned transaction
+            ensure_none(origin)?;
+
+            // Validate certificate has minimum validators
+            ensure!(
+                certificate.validator_count >= 1,
+                Error::<T>::InsufficientCoherence
+            );
+
+            // Store certificate on-chain
+            FinalityCertificates::<T>::insert(certificate.block_number, certificate.clone());
+
+            // Update last finalized block
+            LastFinalizedBlock::<T>::put(certificate.block_number);
+
+            // Emit event
+            Self::deposit_event(Event::FinalityCertificateSubmitted {
+                block_number: certificate.block_number,
+                block_hash: certificate.block_hash,
+                validator_count: certificate.validator_count,
+                total_coherence_score: certificate.total_coherence_score,
+            });
+
+            info!("📜 Finality certificate stored on-chain for block #{:?}", certificate.block_number);
+
+            Ok(())
+        }
+
+        /// Store finality checkpoint (via inherent)
+        ///
+        /// Phase 6B: This extrinsic is called via inherents to store finality
+        /// certificates on-chain at checkpoint blocks (every N blocks).
+        ///
+        /// Unlike submit_finality_certificate (which was for unsigned tx),
+        /// this is a mandatory inherent injected by the block author.
+        #[pallet::call_index(6)]
+        #[pallet::weight((0, DispatchClass::Mandatory))]
+        pub fn store_checkpoint(
+            origin: OriginFor<T>,
+            certificate: FinalityCertificate<T::AccountId, BlockNumberFor<T>, T::Hash>,
+        ) -> DispatchResult {
+            // Inherents must be unsigned
+            ensure_none(origin)?;
+
+            // Validate certificate has minimum validators
+            ensure!(
+                certificate.validator_count >= 1,
+                Error::<T>::InsufficientCoherence
+            );
+
+            // Store certificate on-chain in checkpoint storage
+            FinalityCheckpoints::<T>::insert(certificate.block_number, certificate.clone());
+
+            // Update last finalized block
+            LastFinalizedBlock::<T>::put(certificate.block_number);
+
+            // Emit event
+            Self::deposit_event(Event::FinalityCertificateSubmitted {
+                block_number: certificate.block_number,
+                block_hash: certificate.block_hash,
+                validator_count: certificate.validator_count,
+                total_coherence_score: certificate.total_coherence_score,
+            });
+
+            info!("📌 Checkpoint stored on-chain for block #{:?}", certificate.block_number);
+
+            Ok(())
+        }
     }
-    
+
     // Helper functions
     impl<T: Config> Pallet<T> {
         /// Calculate coherence score with QBER as primary factor
@@ -601,6 +667,73 @@ pub mod pallet {
             data.extend_from_slice(&phase.encode());
             
             H256::from(blake2_256(&data))
+        }
+    }
+
+    /// Validate unsigned transactions for finality certificate submission
+    ///
+    /// Phase 5: ACTIVE! This validates all finality certificate submissions.
+    ///
+    /// Validation checks:
+    /// - Minimum validator count
+    /// - Block progression (no duplicates or old blocks)
+    /// - Future: Falcon1024 signature verification
+    #[pallet::validate_unsigned]
+    impl<T: Config> ValidateUnsigned for Pallet<T> {
+        type Call = Call<T>;
+
+        fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
+            // Only validate submit_finality_certificate calls
+            if let Call::submit_finality_certificate { certificate } = call {
+                // Check 1: Certificate has minimum validator count
+                if certificate.validator_count < 1 {
+                    return InvalidTransaction::Custom(1).into();
+                }
+
+                // Check 2: Block number must be greater than last finalized
+                let last_finalized = LastFinalizedBlock::<T>::get();
+                if certificate.block_number <= last_finalized {
+                    return InvalidTransaction::Stale.into();
+                }
+
+                // Check 3: Prevent duplicate certificates for same block
+                if FinalityCertificates::<T>::contains_key(certificate.block_number) {
+                    return InvalidTransaction::Custom(2).into();
+                }
+
+                // Check 4: Verify supermajority threshold (>= 2/3)
+                // For Phase 6, assume 3 validators. Phase 7: query ValidatorSet pallet
+                let total_validators = 3u32;
+                let threshold = ((total_validators * 2) + 2) / 3; // Ceiling division for 2/3
+
+                if certificate.validator_count < threshold {
+                    info!(
+                        "❌ Certificate rejected: insufficient validators ({}/{}, threshold: {})",
+                        certificate.validator_count, total_validators, threshold
+                    );
+                    return InvalidTransaction::Custom(3).into();
+                }
+
+                // Phase 6: Critical validation complete
+                // TODO Phase 7: Verify Falcon1024 signatures on all votes
+                // TODO Phase 7: Check validator set membership via ValidatorSet pallet
+                // TODO Phase 8: Verify hardware attestation certificates
+
+                info!(
+                    "✅ Certificate validated: block #{:?}, {}/{} validators (threshold: {})",
+                    certificate.block_number, certificate.validator_count, total_validators, threshold
+                );
+
+                // Return valid transaction with high priority (finality is critical)
+                ValidTransaction::with_tag_prefix("ProofOfCoherence")
+                    .priority(TransactionPriority::MAX)
+                    .longevity(64) // Stay in pool for 64 blocks
+                    .propagate(true) // Broadcast to other nodes
+                    .and_provides(certificate.block_number) // Unique identifier
+                    .build()
+            } else {
+                InvalidTransaction::Call.into()
+            }
         }
     }
 }

@@ -75,7 +75,7 @@ pub enum StakerStatus<AccountId> {
 
 /// A struct that reflects stake that an account has in the staking system. Provides a set of
 /// methods to operate on it's properties. Aimed at making `StakingInterface` more concise.
-#[derive(RuntimeDebug, Clone, Copy, Eq, PartialEq, Default)]
+#[derive(RuntimeDebug, Clone, Copy, Eq, PartialEq, Default, Encode, Decode, MaxEncodedLen, TypeInfo)]
 pub struct Stake<Balance> {
 	/// The total stake that `stash` has in the staking system. This includes the
 	/// `active` stake, and any funds currently in the process of unbonding via
@@ -507,7 +507,6 @@ impl<A, B: HasCompact + Default + AddAssign + SubAssign + Clone> From<Vec<Indivi
 	RuntimeDebug,
 	TypeInfo,
 	Default,
-	MaxEncodedLen,
 	Copy,
 )]
 pub struct PagedExposureMetadata<Balance: HasCompact + codec::MaxEncodedLen> {

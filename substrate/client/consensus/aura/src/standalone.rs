@@ -93,14 +93,27 @@ pub async fn claim_slot<P: Pair>(
 	authorities: &[AuthorityId<P>],
 	keystore: &KeystorePtr,
 ) -> Option<P::Public> {
+	eprintln!("🎰 [AURA CLAIM_SLOT] Attempting to claim slot {}", *slot);
+	eprintln!("🎰 [AURA CLAIM_SLOT] Number of authorities: {}", authorities.len());
+
 	let expected_author = slot_author::<P>(slot, authorities);
-	expected_author.and_then(|p| {
-		if keystore.has_keys(&[(p.to_raw_vec(), sp_application_crypto::key_types::AURA)]) {
+
+	if let Some(p) = expected_author {
+		eprintln!("🎰 [AURA CLAIM_SLOT] Expected author for slot {}: {:?}", *slot, &p.to_raw_vec()[..16]);
+		let has_key = keystore.has_keys(&[(p.to_raw_vec(), sp_application_crypto::key_types::AURA)]);
+		eprintln!("🎰 [AURA CLAIM_SLOT] Keystore has_keys result: {}", has_key);
+
+		if has_key {
+			eprintln!("✅ [AURA CLAIM_SLOT] CLAIMED SLOT {}!", *slot);
 			Some(p.clone())
 		} else {
+			eprintln!("❌ [AURA CLAIM_SLOT] Key not found in keystore for slot {}", *slot);
 			None
 		}
-	})
+	} else {
+		eprintln!("❌ [AURA CLAIM_SLOT] No expected author for slot {} (authorities empty?)", *slot);
+		None
+	}
 }
 
 /// Produce the pre-runtime digest containing the slot info.

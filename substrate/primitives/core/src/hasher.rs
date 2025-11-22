@@ -62,7 +62,8 @@ pub mod quantum {
 	use hash256_std_hasher::Hash256StdHasher;
 	use hash_db::Hasher;
 
-	/// Quantum-aware hasher that uses PQC/QKD when available, falls back to Blake2
+	/// Quantum-safe hasher using SHA3/Keccak-256 (128-bit quantum security via Grover bound)
+	/// Always uses Keccak-256 regardless of QKD availability for consistent quantum resistance
 	#[derive(Debug)]
 	pub struct QuantumHasher;
 
@@ -72,14 +73,10 @@ pub mod quantum {
 		const LENGTH: usize = 32;
 
 		fn hash(x: &[u8]) -> Self::Out {
-			// Check if quantum resources are available
-			if Self::quantum_available() {
-				// Use quantum-safe hashing (SHA3/Keccak is quantum-resistant)
-				sp_crypto_hashing::keccak_256(x).into()
-			} else {
-				// Fallback to Blake2
-				sp_crypto_hashing::blake2_256(x).into()
-			}
+			// ALWAYS use quantum-safe hashing (SHA3/Keccak-256)
+			// SHA3 provides 128-bit quantum security via Grover's algorithm
+			// No fallback to BLAKE2 which is quantum-vulnerable
+			sp_crypto_hashing::keccak_256(x).into()
 		}
 	}
 

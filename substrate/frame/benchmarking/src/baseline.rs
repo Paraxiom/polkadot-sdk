@@ -29,7 +29,8 @@ use sp_runtime::{
 };
 
 mod crypto {
-	use sp_application_crypto::{app_crypto, sr25519, KeyTypeId};
+	use sp_application_crypto::{app_crypto, KeyTypeId};
+	use sp_core::sr25519;
 
 	pub const TEST_KEY_TYPE_ID: KeyTypeId = KeyTypeId(*b"test");
 	app_crypto!(sr25519, TEST_KEY_TYPE_ID);

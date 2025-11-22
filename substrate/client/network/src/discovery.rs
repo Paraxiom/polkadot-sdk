@@ -559,6 +559,7 @@ impl DiscoveryBehaviour {
 	/// Can the given `Multiaddr` be put into the DHT?
 	///
 	/// This test is successful only for global IP addresses and DNS names.
+	/// PATCH: Also allows loopback addresses for local development/testing.
 	// NB: Currently all DNS names are allowed and no check for TLD suffixes is done
 	// because the set of valid domains is highly dynamic and would require frequent
 	// updates, for example by utilising publicsuffix.org or IANA.
@@ -570,7 +571,8 @@ impl DiscoveryBehaviour {
 				return true,
 			_ => return false,
 		};
-		ip.is_global()
+		// PATCH: DEV MODE - Allow ALL IPs for local multi-validator testing
+		true  // Accept all addresses (127.0.0.1, 192.168.x.x, same IP different ports)
 	}
 }
 
