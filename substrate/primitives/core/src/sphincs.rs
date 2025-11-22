@@ -323,22 +323,43 @@ impl Signature {
 				Ok(pk) => pk,
 				Err(_) => return false,
 			};
-			
-			let sig = match sphincs_impl::SignedMessage::from_bytes(&self.0) {
-				Ok(sig) => sig,
+
+			// CRITICAL FIX FOR SPHINCS+ VERIFICATION:
+			//
+			// SPHINCS+ in pqcrypto-sphincsplus uses "signed message" format where
+			// the signature and message are COMBINED:
+			//   sign(msg, sk) -> SignedMessage = [signature_bytes || message_bytes]
+			//   open(SignedMessage, pk) -> extracts and returns original message
+			//
+			// However, Substrate uses "detached signature" format where signature
+			// and message are stored separately. During signing, we only store the
+			// first SIGNATURE_SERIALIZED_SIZE bytes, discarding the message part.
+			//
+			// During verification, we need to reconstruct the SignedMessage format
+			// by concatenating signature + message before calling open().
+			//
+			// SignedMessage format: [signature (49856 bytes) || message (variable)]
+
+			let msg_bytes = message.as_ref();
+			let mut signed_message_bytes = Vec::with_capacity(SIGNATURE_SERIALIZED_SIZE + msg_bytes.len());
+			signed_message_bytes.extend_from_slice(&self.0);
+			signed_message_bytes.extend_from_slice(msg_bytes);
+
+			let signed_msg = match sphincs_impl::SignedMessage::from_bytes(&signed_message_bytes) {
+				Ok(sm) => sm,
 				Err(_) => return false,
 			};
-			
-			// Verify the signature
-			match sphincs_impl::open(&sig, &pk) {
+
+			// Verify the signature by opening the signed message
+			match sphincs_impl::open(&signed_msg, &pk) {
 				Ok(opened_msg) => {
 					// Check if the opened message matches our input message
-					opened_msg == message.as_ref()
+					opened_msg == msg_bytes
 				}
 				Err(_) => false,
 			}
 		}
-		
+
 		#[cfg(not(feature = "full_crypto"))]
 		{
 			// Without full_crypto, we can't verify signatures
@@ -364,6 +385,34 @@ impl sp_std::fmt::Debug for Signature {
 pub struct Pair {
 	secret: [u8; SECRET_KEY_SERIALIZED_SIZE],
 	public: Public,
+}
+
+// ============================================================================
+// SHARED CACHE FOR SPHINCS+ KEYPAIRS
+// ============================================================================
+// This cache is shared between Pair::from_seed() and Pair::insert_hardcoded_keypair()
+// to ensure consistent keypair retrieval
+#[cfg(feature = "full_crypto")]
+mod keypair_cache {
+	use core::sync::atomic::{AtomicBool, Ordering};
+	use alloc::collections::BTreeMap;
+	use super::{PUBLIC_KEY_SERIALIZED_SIZE, SECRET_KEY_SERIALIZED_SIZE};
+
+	pub static INIT: AtomicBool = AtomicBool::new(false);
+	pub static mut CACHE: Option<BTreeMap<[u8; 48], ([u8; PUBLIC_KEY_SERIALIZED_SIZE], [u8; SECRET_KEY_SERIALIZED_SIZE])>> = None;
+
+	/// Initialize the cache if not already initialized
+	pub unsafe fn init_cache() {
+		if !INIT.load(Ordering::Acquire) {
+			CACHE = Some(BTreeMap::new());
+			INIT.store(true, Ordering::Release);
+		}
+	}
+
+	/// Get mutable access to the cache (must call init_cache() first)
+	pub unsafe fn get_cache_mut() -> &'static mut BTreeMap<[u8; 48], ([u8; PUBLIC_KEY_SERIALIZED_SIZE], [u8; SECRET_KEY_SERIALIZED_SIZE])> {
+		CACHE.as_mut().unwrap()
+	}
 }
 
 impl Pair {
@@ -416,14 +465,6 @@ impl Pair {
 pub fn from_seed(seed: &Seed) -> Self {
 	#[cfg(feature = "full_crypto")]
 	{
-		use core::sync::atomic::{AtomicBool, Ordering};
-		use alloc::collections::BTreeMap;
-
-		// Simple global cache using BTreeMap (no std::sync::Mutex needed)
-		// We'll use a static mut with atomic guard for thread safety
-		static INIT: AtomicBool = AtomicBool::new(false);
-		static mut CACHE: Option<BTreeMap<[u8; 48], ([u8; PUBLIC_KEY_SERIALIZED_SIZE], [u8; SECRET_KEY_SERIALIZED_SIZE])>> = None;
-
 		let seed_bytes: [u8; 48] = {
 			let mut s = [0u8; 48];
 			s.copy_from_slice(&seed.as_ref()[..48]);
@@ -431,13 +472,8 @@ pub fn from_seed(seed: &Seed) -> Self {
 		};
 
 		unsafe {
-			// Initialize cache on first use
-			if !INIT.load(Ordering::Acquire) {
-				CACHE = Some(BTreeMap::new());
-				INIT.store(true, Ordering::Release);
-			}
-
-			let cache = CACHE.as_mut().unwrap();
+			keypair_cache::init_cache();
+			let cache = keypair_cache::get_cache_mut();
 
 			if let Some((pk_bytes, sk_bytes)) = cache.get(&seed_bytes) {
 				// Return cached keypair
@@ -472,6 +508,46 @@ pub fn from_seed(seed: &Seed) -> Self {
 		secret[..48].copy_from_slice(seed.as_ref());
 		let public = Public([0u8; PUBLIC_KEY_SERIALIZED_SIZE]);
 		Self { secret, public }
+	}
+}
+
+/// Manually insert a hardcoded keypair into the SPHINCS+ cache
+///
+/// This function allows pre-populating the cache with specific keypairs for development mode.
+///
+/// WHY THIS IS NEEDED:
+/// - SPHINCS+ keypair generation is non-deterministic (calls sphincs_impl::keypair())
+/// - The from_seed() function generates RANDOM keypairs and caches them by seed
+/// - For development networks, we need reproducible keys that match genesis config
+/// - Solution: Pre-generate keypairs offline, hardcode them, and insert into cache
+///
+/// USAGE:
+/// ```ignore
+/// let seed = [0xbb, 0xe4, ...]; // 48 bytes
+/// let public = [0x43, 0x53, ...]; // 64 bytes
+/// let secret = [0x..., ...]; // 2592 bytes
+/// insert_hardcoded_keypair(&seed, &public, &secret);
+///
+/// // Now from_seed_slice(&seed) will return this exact keypair
+/// let pair = SphincsPair::from_seed_slice(&seed).unwrap();
+/// assert_eq!(pair.public().as_ref(), &public);
+/// ```
+///
+/// PRODUCTION QRNG INTEGRATION:
+/// - This approach is for development mode only
+/// - For production: Generate keypairs with QRNG → Store permanently → Never re-derive
+/// - See SPHINCS_KEYSTORE_ARCHITECTURE.md for full details
+pub fn insert_hardcoded_keypair(seed: &[u8; 48], public: &[u8; PUBLIC_KEY_SERIALIZED_SIZE], secret: &[u8; SECRET_KEY_SERIALIZED_SIZE]) {
+	#[cfg(feature = "full_crypto")]
+	{
+		unsafe {
+			keypair_cache::init_cache();
+			let cache = keypair_cache::get_cache_mut();
+
+			// Insert the hardcoded keypair into the SHARED cache
+			// This ensures from_seed() will return this exact keypair
+			cache.insert(*seed, (*public, *secret));
+		}
 	}
 }
 
