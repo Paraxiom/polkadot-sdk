@@ -132,21 +132,13 @@ impl<B: BlockT> InformantDisplay<B> {
 					("⚙️ ", format!("Preparing{}", speed), format!(", target=#{target}")),
 			};
 
-		// DEV MODE: Add helpful message for 0 peers on localhost
-		let peer_note = if num_connected_peers == 0 && best_number == finalized_number {
-			" - localhost limitation, deploy to VMs for multi-validator"
-		} else {
-			""
-		};
-
 		info!(
 			target: "substrate",
-			"{} {}{} ({} peers{}), best: #{} ({}), finalized #{} ({}), ⬇ {} ⬆ {}",
+			"{} {}{} ({} peers), best: #{} ({}), finalized #{} ({}), ⬇ {} ⬆ {}",
 			level,
 			style(&status).white().bold(),
 			target,
 			style(num_connected_peers).white().bold(),
-			peer_note,
 			style(best_number).white().bold(),
 			PrintFullHashOnDebugLogging(&best_hash),
 			style(finalized_number).white().bold(),

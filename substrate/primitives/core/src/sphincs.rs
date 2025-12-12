@@ -313,6 +313,118 @@ impl<'de> Deserialize<'de> for Signature {
 
 impl SignatureTrait for Signature {}
 
+/// Combined size of signature + public key for SignatureWithPublic
+pub const SIGNATURE_WITH_PUBLIC_SIZE: usize = SIGNATURE_SERIALIZED_SIZE + PUBLIC_KEY_SERIALIZED_SIZE;
+
+/// SPHINCS+ signature bundled with the public key.
+///
+/// This type is used for extrinsic signing where the verifier doesn't have
+/// direct access to the public key (only the AccountId hash). By embedding
+/// the public key with the signature, verification can proceed correctly.
+///
+/// The verification also checks that the embedded public key matches the
+/// expected AccountId to prevent substitution attacks.
+#[derive(Clone, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, TypeInfo)]
+#[cfg_attr(feature = "std", derive(Hash))]
+pub struct SignatureWithPublic {
+	/// The SPHINCS+ signature (49856 bytes)
+	pub signature: Signature,
+	/// The signer's public key (64 bytes)
+	pub public: Public,
+}
+
+impl Default for SignatureWithPublic {
+	fn default() -> Self {
+		Self {
+			signature: Signature([0u8; SIGNATURE_SERIALIZED_SIZE]),
+			public: Public([0u8; PUBLIC_KEY_SERIALIZED_SIZE]),
+		}
+	}
+}
+
+impl MaxEncodedLen for SignatureWithPublic {
+	fn max_encoded_len() -> usize {
+		// SPHINCS+ signature (49856 bytes) + public key (64 bytes)
+		SIGNATURE_WITH_PUBLIC_SIZE
+	}
+}
+
+impl sp_std::fmt::Debug for SignatureWithPublic {
+	fn fmt(&self, f: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
+		// Just show first 16 bytes of signature and first 16 of public key
+		write!(f, "SignatureWithPublic {{ sig: {:?}..., pub: {:?}... }}",
+			&self.signature.0[..16],
+			&self.public.0[..16])
+	}
+}
+
+impl SignatureWithPublic {
+	/// Create a new SignatureWithPublic from a signature and public key
+	pub fn new(signature: Signature, public: Public) -> Self {
+		Self { signature, public }
+	}
+
+	/// Get the signature
+	pub fn signature(&self) -> &Signature {
+		&self.signature
+	}
+
+	/// Get the public key
+	pub fn public(&self) -> &Public {
+		&self.public
+	}
+
+	/// Verify this signature against a message.
+	/// Also verifies that the embedded public key matches the expected AccountId.
+	pub fn verify<M: AsRef<[u8]>>(&self, message: M, expected_account: &[u8; 32]) -> bool {
+		// First verify that the embedded public key hashes to the expected AccountId
+		let derived_account = sp_crypto_hashing::keccak_256(self.public.as_ref());
+		if &derived_account != expected_account {
+			#[cfg(feature = "std")]
+			log::warn!("SignatureWithPublic: public key does not match expected AccountId");
+			return false;
+		}
+
+		// Now verify the signature using the embedded public key
+		self.signature.verify(message, &self.public)
+	}
+}
+
+#[cfg(feature = "serde")]
+impl Serialize for SignatureWithPublic {
+	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+	where
+		S: Serializer,
+	{
+		// Serialize as concatenated bytes
+		let mut bytes = Vec::with_capacity(SIGNATURE_WITH_PUBLIC_SIZE);
+		bytes.extend_from_slice(&self.signature.0[..]);
+		bytes.extend_from_slice(&self.public.0[..]);
+		serializer.serialize_bytes(&bytes)
+	}
+}
+
+#[cfg(feature = "serde")]
+impl<'de> Deserialize<'de> for SignatureWithPublic {
+	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+	where
+		D: Deserializer<'de>,
+	{
+		let bytes = <Vec<u8>>::deserialize(deserializer)?;
+		if bytes.len() != SIGNATURE_WITH_PUBLIC_SIZE {
+			return Err(serde::de::Error::custom("Invalid SignatureWithPublic length"));
+		}
+		let mut sig_arr = [0u8; SIGNATURE_SERIALIZED_SIZE];
+		let mut pub_arr = [0u8; PUBLIC_KEY_SERIALIZED_SIZE];
+		sig_arr.copy_from_slice(&bytes[..SIGNATURE_SERIALIZED_SIZE]);
+		pub_arr.copy_from_slice(&bytes[SIGNATURE_SERIALIZED_SIZE..]);
+		Ok(SignatureWithPublic {
+			signature: Signature(sig_arr),
+			public: Public(pub_arr),
+		})
+	}
+}
+
 impl Signature {
 	/// Verify a signature against a message and public key
 	pub fn verify<M: AsRef<[u8]>>(&self, message: M, pubkey: &Public) -> bool {
@@ -420,31 +532,19 @@ impl Pair {
 	pub fn from_secret(secret: [u8; SECRET_KEY_SERIALIZED_SIZE]) -> Self {
 		#[cfg(feature = "full_crypto")]
 		{
-			// Extract public key from the secret key
-			let sk = match sphincs_impl::SecretKey::from_bytes(&secret) {
-				Ok(sk) => sk,
-				Err(_) => {
-					return Self { 
-						secret, 
-						public: Public([0u8; PUBLIC_KEY_SERIALIZED_SIZE]) 
-					}
-				}
-			};
-			
-			// Extract public key bytes from secret key (public key is embedded in secret key)
-			let sk_bytes = sk.as_bytes();
-			let pk_bytes = &sk_bytes[..PUBLIC_KEY_SERIALIZED_SIZE];
-			
+			// CRITICAL FIX: Extract public key DIRECTLY from our input secret array,
+			// NOT from pqcrypto's internal representation which may differ!
+			// SPHINCS+ secret key structure: [seed (64 bytes) || public key (64 bytes)] = 128 bytes total
+			// The public key is in the LAST 64 bytes of our secret array.
 			let mut public_bytes = [0u8; PUBLIC_KEY_SERIALIZED_SIZE];
-			let copy_len = pk_bytes.len().min(PUBLIC_KEY_SERIALIZED_SIZE);
-			public_bytes[..copy_len].copy_from_slice(&pk_bytes[..copy_len]);
-			
-			Self { 
-				secret, 
-				public: Public(public_bytes) 
+			public_bytes.copy_from_slice(&secret[SECRET_KEY_SERIALIZED_SIZE - PUBLIC_KEY_SERIALIZED_SIZE..]);
+
+			Self {
+				secret,
+				public: Public(public_bytes)
 			}
 		}
-		
+
 		#[cfg(not(feature = "full_crypto"))]
 		{
 			let public = Public([0u8; PUBLIC_KEY_SERIALIZED_SIZE]);
@@ -599,8 +699,20 @@ impl TraitPair for Pair {
 	type Signature = Signature;
 
 	fn from_seed_slice(seed_slice: &[u8]) -> Result<Self, SecretStringError> {
-		// SPHINCS+ requires exactly 48 bytes of entropy
+		// SPHINCS+ production keypair restoration:
+		// If we receive exactly SECRET_KEY_SERIALIZED_SIZE (128) bytes, treat it as the full secret key
+		// This is the ONLY reliable way to restore a keypair because SPHINCS+ uses non-deterministic
+		// key generation - the seed is only a cache key, not a derivation source.
+		if seed_slice.len() == SECRET_KEY_SERIALIZED_SIZE {
+			let mut secret = [0u8; SECRET_KEY_SERIALIZED_SIZE];
+			secret.copy_from_slice(seed_slice);
+			return Ok(Self::from_secret(secret));
+		}
+
+		// SPHINCS+ requires exactly 48 bytes of entropy for seed-based generation
 		// If seed is not 48 bytes, hash it to generate deterministic 48-byte seed
+		// WARNING: This uses the cache-based approach which is NOT deterministic across restarts!
+		// For production, always use the 128-byte secret key format above.
 		let seed = if seed_slice.len() == 48 {
 			let mut s = [0u8; 48];
 			s.copy_from_slice(seed_slice);

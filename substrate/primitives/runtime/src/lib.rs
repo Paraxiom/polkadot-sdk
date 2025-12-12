@@ -293,21 +293,24 @@ pub enum MultiSignature {
 	// QUANTUM-SAFETY: Sr25519 removed - quantum-vulnerable
 	/// An ECDSA/SECP256k1 signature.
 	// QUANTUM-SAFETY: Ecdsa removed - quantum-vulnerable
-	/// A SPHINCS+ signature (quantum-safe).
-	SphincsPlus(sphincs::Signature),
+	/// A SPHINCS+ signature with embedded public key (quantum-safe).
+	/// The public key is embedded to allow verification without needing to
+	/// recover it from the AccountId (which is impossible since AccountId
+	/// is a hash of the public key).
+	SphincsPlus(sphincs::SignatureWithPublic),
 }
 
 // QUANTUM-SAFETY: Ed25519 conversion removed - quantum-vulnerable
 // QUANTUM-SAFETY: Sr25519 conversion removed - quantum-vulnerable
 // QUANTUM-SAFETY: Ecdsa conversion removed - quantum-vulnerable
 
-impl From<sphincs::Signature> for MultiSignature {
-	fn from(x: sphincs::Signature) -> Self {
+impl From<sphincs::SignatureWithPublic> for MultiSignature {
+	fn from(x: sphincs::SignatureWithPublic) -> Self {
 		Self::SphincsPlus(x)
 	}
 }
 
-impl TryFrom<MultiSignature> for sphincs::Signature {
+impl TryFrom<MultiSignature> for sphincs::SignatureWithPublic {
 	type Error = ();
 	fn try_from(m: MultiSignature) -> Result<Self, Self::Error> {
 		// QUANTUM-SAFETY: Only SphincsPlus is supported
@@ -417,10 +420,20 @@ impl Verify for MultiSignature {
 		let who: [u8; 32] = *signer.as_ref();
 		match self {
 			// QUANTUM-SAFETY: Only Sphincs signatures supported
-			Self::SphincsPlus(sig) => {
-				// For SPHINCS+, we need to recover the public key from the account ID
-				// This is a simplified verification - in production, you'd store the full public key
-				sig.verify(msg.get(), &sphincs::Public::from_account_id(who))
+			Self::SphincsPlus(sig_with_pub) => {
+				// First verify that the embedded public key hashes to the expected AccountId
+				let derived_account = sp_io::hashing::keccak_256(sig_with_pub.public().as_ref());
+				if derived_account != who {
+					return false;
+				}
+
+				// Now verify the signature using the sp_io host function
+				// This allows WASM runtime to delegate signature verification to native code
+				sp_io::crypto::sphincs_verify(
+					sig_with_pub.signature().0.to_vec(),
+					msg.get(),
+					sig_with_pub.public(),
+				)
 			},
 		}
 	}
