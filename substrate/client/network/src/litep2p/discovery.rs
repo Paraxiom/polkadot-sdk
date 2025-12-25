@@ -286,7 +286,15 @@ impl Discovery {
 				},
 				false => (None, None),
 			},
-			_ => panic!("memory transport not supported"),
+			#[cfg(feature = "pqc-transport")]
+			crate::config::TransportConfig::PostQuantum { enable_mdns, .. } => match enable_mdns {
+				true => {
+					let (mdns_config, mdns_event_stream) = MdnsConfig::new(MDNS_QUERY_INTERVAL);
+					(Some(mdns_config), Some(mdns_event_stream))
+				},
+				false => (None, None),
+			},
+			crate::config::TransportConfig::MemoryOnly => panic!("memory transport not supported"),
 		};
 
 		let (kademlia_config, kademlia_handle) = {

@@ -284,6 +284,8 @@ impl NetworkParams {
 			sync_mode: self.sync.into(),
 			network_backend: self.network_backend.into(),
 			qkd_config: Default::default(),
+			#[cfg(feature = "pqc-transport")]
+			pqc_identity: None,
 		}
 	}
 }

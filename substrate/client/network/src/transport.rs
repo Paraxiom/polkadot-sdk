@@ -125,3 +125,64 @@ pub fn build_quantum_transport(
 		(base_transport, bandwidth)
 	}
 }
+
+/// Builds a fully post-quantum secure transport using Kyber-1024 + Falcon-1024
+///
+/// This replaces the Noise protocol's Ed25519 authentication with:
+/// - **Kyber-1024**: NIST-standardized ML-KEM for key encapsulation
+/// - **Falcon-1024**: NIST finalist for digital signatures
+///
+/// # Security Properties
+/// - IND-CCA2 security from Kyber
+/// - EUF-CMA security from Falcon
+/// - Forward secrecy via ephemeral Kyber keys
+/// - Full quantum resistance (no classical crypto in critical path)
+#[cfg(feature = "pqc-transport")]
+#[allow(deprecated)]
+pub fn build_pqc_transport(
+	pqc_identity: crate::pqc_authenticator::PqcIdentity,
+	memory_only: bool,
+) -> (Boxed<(PeerId, StreamMuxerBox)>, Arc<BandwidthSinks>) {
+	use crate::pqc_authenticator::PqcConfig;
+
+	log::info!("🔐 Building post-quantum secure transport (Kyber-1024 + Falcon-1024)");
+
+	// Build the base layer of the transport (TCP/DNS/WS)
+	let transport = if !memory_only {
+		let tcp_config = tcp::Config::new().nodelay(true);
+		let tcp_trans = tcp::tokio::Transport::new(tcp_config.clone());
+		let dns_init = dns::tokio::Transport::system(tcp_trans);
+
+		Either::Left(if let Ok(dns) = dns_init {
+			let tcp_trans = tcp::tokio::Transport::new(tcp_config);
+			let dns_for_wss = dns::tokio::Transport::system(tcp_trans)
+				.expect("same system_conf & resolver to work");
+			Either::Left(websocket::WsConfig::new(dns_for_wss).or_transport(dns))
+		} else {
+			let tcp_trans = tcp::tokio::Transport::new(tcp_config.clone());
+			let desktop_trans = websocket::WsConfig::new(tcp_trans)
+				.or_transport(tcp::tokio::Transport::new(tcp_config));
+			Either::Right(desktop_trans)
+		})
+	} else {
+		Either::Right(OptionalTransport::some(libp2p::core::transport::MemoryTransport::default()))
+	};
+
+	// Use PQC authenticator instead of Noise
+	let pqc_config = PqcConfig::new(pqc_identity.clone());
+	let multiplexing_config = libp2p::yamux::Config::default();
+
+	let transport = transport
+		.upgrade(upgrade::Version::V1Lazy)
+		.authenticate(pqc_config)
+		.multiplex(multiplexing_config)
+		.timeout(Duration::from_secs(30)) // Longer timeout for PQC handshake
+		.boxed();
+
+	log::info!(
+		"✅ PQC transport initialized with identity: {}",
+		pqc_identity.peer_id()
+	);
+
+	transport.with_bandwidth_logging()
+}

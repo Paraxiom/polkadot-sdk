@@ -72,6 +72,13 @@ reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-feature
 uuid = { version = "1.4", features = ["v4"] }
 hex = "0.4"
 
+# Post-Quantum Cryptography for PQC transport layer
+pqcrypto-kyber = "0.8"      # ML-KEM-1024 for key encapsulation
+pqcrypto-falcon = "0.3"     # Falcon-1024 for signatures
+pqcrypto-traits = "0.3"     # Common PQC traits
+aes-gcm = "0.10"            # AES-256-GCM for session encryption
+sha3 = "0.10"               # SHA3/SHAKE for key derivation
+
 [dev-dependencies]
 assert_matches = { workspace = true }
 mockall = { workspace = true }
@@ -94,3 +101,5 @@ prost-build = { workspace = true }
 
 [features]
 default = []
+# Enable post-quantum cryptography transport layer (Kyber-1024 + Falcon-1024)
+pqc-transport = []

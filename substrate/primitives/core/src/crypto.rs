@@ -21,9 +21,9 @@
 use crate::U256;
 // Quantum imports for PQC
 // use crate::QuantumHasher;  // Unused import
-use alloc::{format, str, vec::Vec};
+use alloc::{format, str, vec, vec::Vec};
 #[cfg(feature = "serde")]
-use alloc::{string::String, vec};
+use alloc::string::String;
 use bip39::{Language, Mnemonic};
 use codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 use core::hash::Hash;

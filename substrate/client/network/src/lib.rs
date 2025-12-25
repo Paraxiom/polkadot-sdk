@@ -254,6 +254,8 @@ mod qkd_integration;
 mod mock;
 
 pub mod config;
+#[cfg(feature = "pqc-transport")]
+pub mod pqc_authenticator;
 pub mod discovery;
 pub mod error;
 pub mod event;

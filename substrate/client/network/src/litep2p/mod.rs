@@ -284,6 +284,8 @@ impl Litep2pNetworkBackend {
 		let _ = match config.network_config.transport {
 			TransportConfig::MemoryOnly => panic!("memory transport not supported"),
 			TransportConfig::Normal { .. } => false,
+			#[cfg(feature = "pqc-transport")]
+			TransportConfig::PostQuantum { .. } => false,
 		};
 		let config_builder = ConfigBuilder::new();
 

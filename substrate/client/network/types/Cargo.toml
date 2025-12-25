@@ -12,6 +12,7 @@ documentation = "https://docs.rs/sc-network-types"
 [dependencies]
 bs58 = { workspace = true, default-features = true }
 bytes = { workspace = true, default-features = false }
+ed25519-dalek = { workspace = true, features = ["rand_core"] }
 # QUANTUM-SAFETY: Using sp-core for SPHINCS+ quantum-safe signatures
 sp-core = { workspace = true }
 libp2p-identity = { features = ["ed25519", "peerid", "rand"], workspace = true }

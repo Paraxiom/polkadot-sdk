@@ -302,18 +302,24 @@ pub mod pallet {
             // Finalize block using Proof of Coherence (quantum-safe alternative to GRANDPA)
             LastFinalizedBlock::<T>::put(block_number);
 
-            // Log finalization with quantum reporter status
+            // Log finalization with consensus level status
+            // Levels: 1=BFT-Classical, 2=PQ-BFT, 3=PQ-BFT+Coherence, 4=PQ-BFT+QRNG, 5=Full-PoC
             if !reporter_info_parts.is_empty() {
                 let sources = reporter_info_parts.join("+");
+                // Level 4-5: Quantum hardware active
+                let level = if has_qkd { 5 } else { 4 };
                 info!(
-                    "✨ Finalized #{} (PoC: quantum sources active: [{}], reporters={})",
+                    "✨ Finalized #{} (Consensus: Level {} - quantum sources: [{}], reporters={})",
                     block_number.saturated_into::<u64>(),
+                    level,
                     sources,
                     reporter_count
                 );
             } else {
+                // Level 3: PQ-BFT + Coherence (SPHINCS+ signatures + coherence-weighted selection)
+                // No quantum hardware, but still post-quantum secure via SPHINCS+
                 info!(
-                    "✨ Finalized #{} (PoC: simulated mode, no quantum hardware connected)",
+                    "✨ Finalized #{} (Consensus: PQ-BFT + Coherence)",
                     block_number.saturated_into::<u64>()
                 );
             }

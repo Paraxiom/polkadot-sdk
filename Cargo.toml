@@ -791,7 +791,7 @@ dlmalloc = { version = "0.2.4" }
 docify = { version = "0.2.9" }
 dyn-clonable = { version = "0.9.0" }
 dyn-clone = { version = "1.0.16" }
-# ed25519-dalek = { version = "2.1", default-features = false } # Removed - classical crypto
+ed25519-dalek = { version = "2.1", default-features = false } # Re-enabled for libp2p peer identity
 # ed25519-zebra = { version = "4.0.3", default-features = false } # Removed - classical crypto
 either = { version = "1.8.1", default-features = false }
 emulated-integration-tests-common = { path = "cumulus/parachains/integration-tests/emulated/common", default-features = false }

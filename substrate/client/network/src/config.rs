@@ -246,7 +246,7 @@ impl std::ops::Deref for NotificationHandshake {
 /// Configuration for the transport layer.
 #[derive(Clone, Debug)]
 pub enum TransportConfig {
-	/// Normal transport mode.
+	/// Normal transport mode using classical Noise protocol (Ed25519).
 	Normal {
 		/// If true, the network will use mDNS to discover other libp2p nodes on the local network
 		/// and connect to them if they support the same chain.
@@ -255,6 +255,21 @@ pub enum TransportConfig {
 		/// If true, allow connecting to private IPv4/IPv6 addresses (as defined in
 		/// [RFC1918](https://tools.ietf.org/html/rfc1918)). Irrelevant for addresses that have
 		/// been passed in `::sc_network::config::NetworkConfiguration::boot_nodes`.
+		allow_private_ip: bool,
+	},
+
+	/// Post-quantum secure transport mode using Kyber-1024 + Falcon-1024.
+	///
+	/// This replaces the Noise protocol's Ed25519 authentication with:
+	/// - **Kyber-1024**: NIST-standardized ML-KEM for key encapsulation
+	/// - **Falcon-1024**: NIST finalist for digital signatures
+	///
+	/// All nodes in the network must use the same transport mode.
+	#[cfg(feature = "pqc-transport")]
+	PostQuantum {
+		/// If true, the network will use mDNS to discover other libp2p nodes.
+		enable_mdns: bool,
+		/// If true, allow connecting to private IPv4/IPv6 addresses.
 		allow_private_ip: bool,
 	},
 
@@ -358,7 +373,7 @@ impl NodeKeyConfig {
 						None
 					}
 				}) {
-					Some(s) => ed25519::SecretKey::try_from_bytes(&s),
+					Some(mut s) => ed25519::SecretKey::try_from_bytes(&mut s),
 					_ => ed25519::SecretKey::try_from_bytes(&mut b),
 				},
 				ed25519::SecretKey::generate,
@@ -658,6 +673,11 @@ pub struct NetworkConfiguration {
 	
 	/// Quantum Key Distribution configuration
 	pub qkd_config: Option<crate::qkd_integration::QkdConfig>,
+
+	/// Post-quantum cryptography identity for PQC transport.
+	/// Required when using `TransportConfig::PostQuantum`.
+	#[cfg(feature = "pqc-transport")]
+	pub pqc_identity: Option<crate::pqc_authenticator::PqcIdentity>,
 }
 
 impl NetworkConfiguration {
@@ -692,6 +712,8 @@ impl NetworkConfiguration {
 			ipfs_server: false,
 			network_backend: NetworkBackendType::Litep2p,
 			qkd_config: None,
+			#[cfg(feature = "pqc-transport")]
+			pqc_identity: None,
 		}
 	}
 

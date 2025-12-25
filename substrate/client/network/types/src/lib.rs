@@ -16,11 +16,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// QUANTUM-SAFETY: ed25519 replaced with quantum-safe identity
-// This provides a compatibility layer using SPHINCS+ for network identity
-// Real P2P communication uses QuantumTransport with QKD integration
+// Ed25519 module for libp2p compatibility - required for standard peer IDs
+pub mod ed25519;
+
+// Quantum-safe identity module (SPHINCS+) - used for PQC transport when enabled
 pub mod quantum_identity;
-pub use quantum_identity as ed25519; // Compatibility alias
 pub mod kad;
 pub mod multiaddr;
 pub mod multihash;

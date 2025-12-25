@@ -72,6 +72,15 @@ impl Keypair {
 	pub fn secret(&self) -> SecretKey {
 		SecretKey(self.0.to_bytes())
 	}
+
+	/// Convert to libp2p-compatible ed25519 seed bytes.
+	/// Returns the secret key bytes for reconstructing an identical keypair.
+	/// This ensures the same peer ID is generated when converting to libp2p types.
+	pub fn to_libp2p_ed25519(&self) -> Vec<u8> {
+		// Return the secret key bytes (first 32 bytes of the keypair)
+		// This allows reconstruction of an identical keypair with the same peer ID
+		self.0.to_bytes()[..32].to_vec()
+	}
 }
 
 impl fmt::Debug for Keypair {

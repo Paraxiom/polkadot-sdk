@@ -17086,6 +17086,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "pqcrypto-kyber"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "15c00293cf898859d0c771455388054fd69ab712263c73fdc7f287a39b1ba000"
+dependencies = [
+ "cc",
+ "glob",
+ "libc",
+ "pqcrypto-internals",
+ "pqcrypto-traits",
+]
+
+[[package]]
 name = "pqcrypto-sphincsplus"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -19675,6 +19688,7 @@ dependencies = [
 name = "sc-network"
 version = "0.34.0"
 dependencies = [
+ "aes-gcm",
  "array-bytes 6.2.3",
  "assert_matches",
  "async-channel 1.9.0",
@@ -19700,6 +19714,9 @@ dependencies = [
  "parking_lot 0.12.4",
  "partial_sort",
  "pin-project",
+ "pqcrypto-falcon 0.3.0",
+ "pqcrypto-kyber",
+ "pqcrypto-traits",
  "prost 0.12.6",
  "prost-build",
  "rand 0.8.5",
@@ -19712,6 +19729,7 @@ dependencies = [
  "schnellru",
  "serde",
  "serde_json",
+ "sha3",
  "smallvec",
  "sp-arithmetic",
  "sp-blockchain",
@@ -19901,6 +19919,7 @@ version = "0.10.0"
 dependencies = [
  "bs58",
  "bytes",
+ "ed25519-dalek",
  "libp2p-identity",
  "libp2p-kad",
  "litep2p",

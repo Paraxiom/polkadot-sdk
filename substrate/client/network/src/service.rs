@@ -269,20 +269,11 @@ where
 		} = params.network_config;
 
 		// Private and public keys configuration.
-		let local_identity = network_config.node_key.clone().into_keypair()?;
+		// Convert to libp2p ed25519 types for consistent peer ID generation
+		let local_identity: ed25519::Keypair = network_config.node_key.clone().into_keypair()?.into();
 		let local_public = local_identity.public();
-		let local_peer_id = local_public.to_peer_id();
-
-		// Convert to libp2p types.
-		// QUANTUM-SAFETY: Convert quantum identity to ed25519 for libp2p compatibility
-		let seed_bytes = local_identity.to_libp2p_ed25519();
-		let mut seed = [0u8; 32];
-		seed.copy_from_slice(&seed_bytes[..32]);
-		let local_identity = ed25519::Keypair::from(
-			ed25519::SecretKey::try_from_bytes(&mut seed).expect("Valid seed")
-		);
-		let local_public = local_identity.public();
-		let local_peer_id: PeerId = local_peer_id.into();
+		let libp2p_public_key = libp2p::identity::PublicKey::from(local_public.clone());
+		let local_peer_id: PeerId = libp2p::PeerId::from_public_key(&libp2p_public_key).into();
 
 		network_config.boot_nodes = network_config
 			.boot_nodes
@@ -345,12 +336,30 @@ where
 		info!(target: LOG_TARGET, "Running libp2p network backend");
 
 		let (transport, bandwidth) = {
-			let config_mem = match network_config.transport {
-				TransportConfig::MemoryOnly => true,
-				TransportConfig::Normal { .. } => false,
-			};
-
-			transport::build_transport(local_identity.clone().into(), config_mem)
+			match &network_config.transport {
+				TransportConfig::MemoryOnly => {
+					transport::build_transport(local_identity.clone().into(), true)
+				},
+				TransportConfig::Normal { .. } => {
+					transport::build_transport(local_identity.clone().into(), false)
+				},
+				#[cfg(feature = "pqc-transport")]
+				TransportConfig::PostQuantum { .. } => {
+					// Use post-quantum secure transport (Kyber-1024 + Falcon-1024)
+					let pqc_identity = network_config.pqc_identity.clone()
+						.expect("PQC identity required for PostQuantum transport");
+					info!(
+						target: LOG_TARGET,
+						"🔐 Using post-quantum secure transport (Kyber-1024 + Falcon-1024)"
+					);
+					info!(
+						target: LOG_TARGET,
+						"🔑 PQC Peer ID: {}",
+						pqc_identity.peer_id()
+					);
+					transport::build_pqc_transport(pqc_identity, false)
+				},
+			}
 		};
 
 		let (to_notifications, from_protocol_controllers) =
@@ -507,6 +516,14 @@ where
 						enable_mdns,
 						allow_private_ip: allow_private_ipv4,
 						..
+					} => {
+						config.with_mdns(enable_mdns);
+						config.allow_private_ip(allow_private_ipv4);
+					},
+					#[cfg(feature = "pqc-transport")]
+					TransportConfig::PostQuantum {
+						enable_mdns,
+						allow_private_ip: allow_private_ipv4,
 					} => {
 						config.with_mdns(enable_mdns);
 						config.allow_private_ip(allow_private_ipv4);

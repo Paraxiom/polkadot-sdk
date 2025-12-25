@@ -220,6 +220,4 @@ mod litep2p_compat {
 
 // Export conversions when std is available
 #[cfg(feature = "std")]
-pub use libp2p_compat::*;
-#[cfg(feature = "std")]
 pub use litep2p_compat::*;
