@@ -451,17 +451,23 @@ pub enum RewardDestination<AccountId> {
 	RuntimeDebug,
 	TypeInfo,
 	Default,
-	MaxEncodedLen,
 )]
 pub struct ValidatorPrefs {
 	/// Reward that validator takes up-front; only the rest is split between themselves and
 	/// nominators.
-	#[codec(compact)]
 	pub commission: Perbill,
 	/// Whether or not this validator is accepting more nominations. If `true`, then no nominator
 	/// who is not already nominating this validator may nominate them. By default, validators
 	/// are accepting nominations.
 	pub blocked: bool,
+}
+
+// Manual MaxEncodedLen impl to avoid Compact<Perbill> issue
+impl MaxEncodedLen for ValidatorPrefs {
+	fn max_encoded_len() -> usize {
+		// Perbill is u32 (4 bytes) + bool (1 byte)
+		4 + 1
+	}
 }
 
 /// Just a Balance/BlockNumber tuple to encode when a chunk of funds will be unlocked.

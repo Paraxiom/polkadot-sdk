@@ -30,7 +30,7 @@ use sc_cli::{CliConfiguration, Result, SharedParams};
 use sc_service::Configuration;
 use sc_sysinfo::{
 	benchmark_cpu, benchmark_cpu_parallelism, benchmark_disk_random_writes,
-	benchmark_disk_sequential_writes, benchmark_memory, benchmark_sr25519_verify, ExecutionLimit,
+	benchmark_disk_sequential_writes, benchmark_memory, benchmark_sphincs_verify, ExecutionLimit,
 	Metric, Requirement, Requirements, Throughput,
 };
 
@@ -152,7 +152,7 @@ impl MachineCmd {
 			Metric::Blake2256 => benchmark_cpu(hash_limit),
 			Metric::Blake2256Parallel { num_cores } =>
 				benchmark_cpu_parallelism(hash_limit, *num_cores),
-			Metric::Sr25519Verify => benchmark_sr25519_verify(verify_limit),
+			Metric::SphincsVerify => benchmark_sphincs_verify(verify_limit),
 			Metric::MemCopy => benchmark_memory(memory_limit),
 			Metric::DiskSeqWrite => benchmark_disk_sequential_writes(disk_limit, dir)?,
 			Metric::DiskRndWrite => benchmark_disk_random_writes(disk_limit, dir)?,

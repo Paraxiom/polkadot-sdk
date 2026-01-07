@@ -402,8 +402,9 @@ pub fn sign(
 	key: &ValidatorId,
 	data: &[u8],
 ) -> Result<Option<ValidatorSignature>, KeystoreError> {
+	// SPHINCS+ fork: use sphincs_sign instead of sr25519_sign
 	let signature = keystore
-		.sr25519_sign(ValidatorId::ID, key.as_ref(), data)?
+		.sphincs_sign(ValidatorId::ID, key.as_ref(), data)?
 		.map(|sig| sig.into());
 	Ok(signature)
 }

@@ -23,19 +23,22 @@
 use crate::benchmarks;
 use alloc::{vec, vec::Vec};
 use frame_system::Pallet as System;
-use sp_runtime::{
-	traits::{AppVerify, Hash},
-	RuntimeAppPublic,
-};
+use sp_runtime::traits::Hash;
+// DISABLED: Not needed without sr25519_verification benchmark
+// use sp_runtime::{
+// 	traits::{AppVerify, Hash},
+// 	RuntimeAppPublic,
+// };
 
-mod crypto {
-	use sp_application_crypto::{app_crypto, KeyTypeId};
-	use sp_core::sr25519;
-
-	pub const TEST_KEY_TYPE_ID: KeyTypeId = KeyTypeId(*b"test");
-	app_crypto!(sr25519, TEST_KEY_TYPE_ID);
-}
-pub type SignerId = crypto::Public;
+// DISABLED: sr25519/ecdsa crypto not compatible with SPHINCS+ fork
+// mod crypto {
+// 	use sp_application_crypto::{app_crypto, KeyTypeId};
+// 	use sp_core::ecdsa;
+//
+// 	pub const TEST_KEY_TYPE_ID: KeyTypeId = KeyTypeId(*b"test");
+// 	app_crypto!(ecdsa, TEST_KEY_TYPE_ID);
+// }
+// pub type SignerId = crypto::Public;
 
 pub struct Pallet<T: Config>(System<T>);
 pub trait Config: frame_system::Config {}
@@ -85,22 +88,23 @@ benchmarks! {
 		assert!(hash != T::Hash::default());
 	}
 
-	sr25519_verification {
-		let i in 0 .. 100;
-
-		let public = SignerId::generate_pair(None);
-
-		let sigs_count: u8 = i.try_into().unwrap();
-		let msg_and_sigs: Vec<_> = (0..sigs_count).map(|j| {
-			let msg = vec![j, j];
-			(msg.clone(), public.sign(&msg).unwrap())
-		})
-		.collect();
-	}: {
-		msg_and_sigs.iter().for_each(|(msg, sig)| {
-			assert!(sig.verify(&msg[..], &public));
-		});
-	}
+	// DISABLED: sr25519_verification - not compatible with SPHINCS+ fork
+	// sr25519_verification {
+	// 	let i in 0 .. 100;
+	//
+	// 	let public = SignerId::generate_pair(None);
+	//
+	// 	let sigs_count: u8 = i.try_into().unwrap();
+	// 	let msg_and_sigs: Vec<_> = (0..sigs_count).map(|j| {
+	// 		let msg = vec![j, j];
+	// 		(msg.clone(), public.sign(&msg).unwrap())
+	// 	})
+	// 	.collect();
+	// }: {
+	// 	msg_and_sigs.iter().for_each(|(msg, sig)| {
+	// 		assert!(sig.verify(&msg[..], &public));
+	// 	});
+	// }
 
 	impl_benchmark_test_suite!(
 		Pallet,

@@ -233,8 +233,9 @@ impl SignedDisputeStatement {
 		let data = dispute_statement
 			.payload_data(candidate_hash, session_index)
 			.map_err(|_| SignedDisputeStatementError::PayloadError)?;
+		// SPHINCS+ fork: use sphincs_sign instead of sr25519_sign
 		let signature = keystore
-			.sr25519_sign(ValidatorId::ID, validator_public.as_ref(), &data)
+			.sphincs_sign(ValidatorId::ID, validator_public.as_ref(), &data)
 			.map_err(SignedDisputeStatementError::KeyStoreError)?
 			.map(|sig| Self {
 				dispute_statement,

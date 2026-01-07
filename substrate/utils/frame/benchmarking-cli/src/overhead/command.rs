@@ -37,6 +37,7 @@ use crate::{
 };
 use clap::{error::ErrorKind, Args, CommandFactory, Parser};
 use codec::{Decode, Encode};
+#[cfg(feature = "parachain")]
 use cumulus_client_parachain_inherent::MockValidationDataInherentDataProvider;
 use fake_runtime_api::RuntimeApi as FakeRuntimeApi;
 use frame_support::Deserialize;
@@ -172,10 +173,15 @@ pub(crate) enum BenchmarkType {
 }
 
 /// Hostfunctions that are typically used by parachains.
+#[cfg(feature = "parachain")]
 pub type ParachainHostFunctions = (
 	cumulus_primitives_proof_size_hostfunction::storage_proof_size::HostFunctions,
 	sp_io::SubstrateHostFunctions,
 );
+
+/// Hostfunctions for solo chains (when parachain feature is disabled).
+#[cfg(not(feature = "parachain"))]
+pub type ParachainHostFunctions = sp_io::SubstrateHostFunctions;
 
 pub type BlockNumber = u32;
 
@@ -204,6 +210,7 @@ fn create_inherent_data<Client: UsageProvider<Block> + HeaderBackend<Block>, Blo
 	let mut inherent_data = InherentData::new();
 
 	// Para inherent can only makes sense when we are handling a parachain.
+	#[cfg(feature = "parachain")]
 	if let Parachain(para_id) = chain_type {
 		let parachain_validation_data_provider = MockValidationDataInherentDataProvider::<()> {
 			para_id: ParaId::from(*para_id),
@@ -215,6 +222,8 @@ fn create_inherent_data<Client: UsageProvider<Block> + HeaderBackend<Block>, Blo
 			parachain_validation_data_provider.provide_inherent_data(&mut inherent_data),
 		);
 	}
+	#[cfg(not(feature = "parachain"))]
+	let _ = chain_type; // Suppress unused warning
 
 	// Parachain inherent that is used on relay chains to perform parachain validation.
 	let para_inherent = polkadot_primitives::InherentData {
@@ -705,6 +714,7 @@ mod tests {
 	}
 
 	#[test]
+	#[cfg(feature = "parachain")]
 	fn test_chain_type_parachain() {
 		let executor: WasmExecutor<ParachainHostFunctions> = WasmExecutor::builder().build();
 		let code_bytes = cumulus_test_runtime::WASM_BINARY

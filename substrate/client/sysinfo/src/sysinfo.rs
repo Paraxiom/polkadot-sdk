@@ -40,8 +40,10 @@ use std::{
 /// A single hardware metric.
 #[derive(Deserialize, Serialize, Debug, Clone, Copy, PartialEq)]
 pub enum Metric {
-	/// SR25519 signature verification.
-	Sr25519Verify,
+	/// SPHINCS+ signature verification (post-quantum).
+	/// Note: Was previously Sr25519Verify, renamed for Paraxiom SPHINCS+ fork.
+	#[serde(alias = "Sr25519Verify")]
+	SphincsVerify,
 	/// Blake2-256 hashing algorithm.
 	Blake2256,
 	/// Blake2-256 hashing algorithm executed in parallel
@@ -89,7 +91,7 @@ impl Metric {
 	/// The category of the metric.
 	pub fn category(&self) -> &'static str {
 		match self {
-			Self::Sr25519Verify | Self::Blake2256 | Self::Blake2256Parallel { .. } => "CPU",
+			Self::SphincsVerify | Self::Blake2256 | Self::Blake2256Parallel { .. } => "CPU",
 			Self::MemCopy => "Memory",
 			Self::DiskSeqWrite | Self::DiskRndWrite => "Disk",
 		}
@@ -98,7 +100,7 @@ impl Metric {
 	/// The name of the metric. It is always prefixed by the [`self.category()`].
 	pub fn name(&self) -> Cow<'static, str> {
 		match self {
-			Self::Sr25519Verify => Cow::Borrowed("SR25519-Verify"),
+			Self::SphincsVerify => Cow::Borrowed("SPHINCS+-Verify"),
 			Self::Blake2256 => Cow::Borrowed("BLAKE2-256"),
 			Self::Blake2256Parallel { num_cores } =>
 				Cow::Owned(format!("BLAKE2-256-Parallel-{}", num_cores)),
@@ -771,7 +773,7 @@ impl Requirements {
 							});
 						}
 					},
-				Metric::Sr25519Verify => {},
+				Metric::SphincsVerify => {},
 			}
 		}
 		if failures.is_empty() {

@@ -23,6 +23,7 @@ mod machine;
 mod overhead;
 mod pallet;
 mod shared;
+#[cfg(feature = "storage-benchmarks")]
 mod storage;
 
 pub use block::BlockCmd;
@@ -34,6 +35,7 @@ pub use overhead::{
 };
 pub use pallet::PalletCmd;
 pub use sc_service::BasePath;
+#[cfg(feature = "storage-benchmarks")]
 pub use storage::StorageCmd;
 
 use sc_cli::{CliConfiguration, DatabaseParams, ImportParams, PruningParams, Result, SharedParams};
@@ -44,6 +46,7 @@ use sc_cli::{CliConfiguration, DatabaseParams, ImportParams, PruningParams, Resu
 #[derive(Debug, clap::Subcommand)]
 pub enum BenchmarkCmd {
 	Pallet(PalletCmd),
+	#[cfg(feature = "storage-benchmarks")]
 	Storage(StorageCmd),
 	Overhead(OverheadCmd),
 	Block(BlockCmd),
@@ -60,6 +63,7 @@ macro_rules! unwrap_cmd {
 	} => {
 		match $self {
 			BenchmarkCmd::Pallet($cmd) => $code,
+			#[cfg(feature = "storage-benchmarks")]
 			BenchmarkCmd::Storage($cmd) => $code,
 			BenchmarkCmd::Overhead($cmd) => $code,
 			BenchmarkCmd::Block($cmd) => $code,

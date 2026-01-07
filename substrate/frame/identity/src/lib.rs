@@ -157,16 +157,18 @@ pub mod pallet {
 	#[cfg(feature = "runtime-benchmarks")]
 	impl BenchmarkHelper<sp_runtime::MultiSigner, sp_runtime::MultiSignature> for () {
 		fn sign_message(message: &[u8]) -> (sp_runtime::MultiSigner, sp_runtime::MultiSignature) {
-			let public = sp_io::crypto::sr25519_generate(0.into(), None);
-			let signature = sp_runtime::MultiSignature::Sr25519(
-				sp_io::crypto::sr25519_sign(
-					0.into(),
-					&public.into_account().try_into().unwrap(),
-					message,
-				)
-				.unwrap(),
-			);
-			(public.into(), signature)
+			// Use SPHINCS+ for Paraxiom fork compatibility
+			let public = sp_io::crypto::sphincs_generate(0.into(), None);
+			let sig = sp_io::crypto::sphincs_sign(0.into(), &public, message).unwrap();
+			// Construct SignatureWithPublic for MultiSignature::SphincsPlus
+			let sig_with_pub = sp_runtime::app_crypto::sphincs::SignatureWithPublic {
+				signature: sig,
+				public: public.clone(),
+			};
+			(
+				sp_runtime::MultiSigner::SphincsPlus(public),
+				sp_runtime::MultiSignature::SphincsPlus(sig_with_pub),
+			)
 		}
 	}
 
