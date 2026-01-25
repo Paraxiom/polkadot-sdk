@@ -78,31 +78,22 @@ pub mod pallet {
             witness_bytes: Vec<u8>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            
-            // Decode the STARK proof
+
             let stark_proof = StarkProof::decode(&mut &proof_bytes[..])
                 .map_err(|_| Error::<T>::InvalidProof)?;
-            
-            // Verify proof size limit
             ensure!(
                 stark_proof.proof_bytes.len() <= sp_stark_crypto::MAX_PROOF_SIZE,
                 Error::<T>::ProofTooLarge
             );
-            
-            // Calculate proof hash
+
             let proof_hash = T::Hashing::hash_of(&proof_bytes);
             let witness_hash = T::Hashing::hash_of(&witness_bytes);
-            
-            // Verify witness hash matches the one in the proof
             ensure!(
                 stark_proof.public_witness_hash == witness_hash.into(),
                 Error::<T>::WitnessMismatch
             );
-            
-            // Get current block number
+
             let block_number = <frame_system::Pallet<T>>::block_number();
-            
-            // Create on-chain proof record
             let proof_record = OnChainProofRecord {
                 proof_hash: proof_hash.into(),
                 public_witness_hash: witness_hash.into(),
@@ -110,16 +101,13 @@ pub mod pallet {
                 block_number: block_number.saturated_into(),
                 proof_type: stark_proof.proof_type as u8,
             };
-            
-            // Store proof record
+
             ProofRecords::<T>::insert(&proof_hash, proof_record);
-            
             Self::deposit_event(Event::ProofSubmitted {
                 proof_hash,
                 submitter: who.clone(),
             });
-            
-            // Emit verification event based on proof type
+
             match stark_proof.proof_type {
                 ProofType::SymmetricEncryption => {
                     Self::deposit_event(Event::ProofVerified {

@@ -255,8 +255,6 @@ pub mod pallet {
             };
             
             Devices::<T>::insert(&mac_address, &device);
-            
-            // Update operator metrics
             OperatorMetrics::<T>::mutate(&operator, |metrics| {
                 let m = metrics.get_or_insert(OperatorMetrics {
                     device_count: 0,
@@ -267,8 +265,6 @@ pub mod pallet {
                 });
                 m.device_count += 1;
             });
-            
-            // Update network stats
             NetworkStats::<T>::mutate(|stats| {
                 stats.total_devices += 1;
             });
@@ -308,7 +304,7 @@ pub mod pallet {
                 Error::<T>::LinkAlreadyExists
             );
             
-            // Check distance feasibility (typical QKD limit ~100km)
+            // QKD links limited to ~150km due to fiber attenuation
             ensure!(distance <= 150, Error::<T>::DistanceTooGreat);
             
             let now = T::UnixTime::now().as_secs();
@@ -322,11 +318,10 @@ pub mod pallet {
                 active: true,
                 last_key_exchange: now,
             };
-            
-            // Store bidirectionally
+
+            // Bidirectional storage for link lookups from either endpoint
             Links::<T>::insert(&alice_mac, &bob_mac, &link);
             Links::<T>::insert(&bob_mac, &alice_mac, &link);
-            
             NetworkStats::<T>::mutate(|stats| {
                 stats.active_links += 1;
             });
@@ -361,22 +356,15 @@ pub mod pallet {
                     d.last_seen = now;
                     d.keys_generated += keys_generated;
                     d.entropy_contributed += entropy_bits;
-                    
-                    // Update average QBER
-                    if d.avg_qber == 0 {
-                        d.avg_qber = qber;
-                    } else {
-                        d.avg_qber = (d.avg_qber + qber) / 2;
-                    }
-                    
-                    // Update operator metrics
+
+                    // Running average
+                    d.avg_qber = if d.avg_qber == 0 { qber } else { (d.avg_qber + qber) / 2 };
+
                     OperatorMetrics::<T>::mutate(&d.operator, |metrics| {
                         if let Some(m) = metrics {
                             m.total_entropy += entropy_bits;
                         }
                     });
-                    
-                    // Update network stats
                     NetworkStats::<T>::mutate(|stats| {
                         stats.total_keys_generated += keys_generated as u128;
                         stats.total_entropy_bits += entropy_bits;

@@ -170,8 +170,7 @@ pub mod pallet {
             source: Vec<u8>,
         ) -> DispatchResult {
             let _who = ensure_signed(origin)?;
-            
-            // Check QBER threshold
+
             ensure!(qber <= T::MaxQBER::get(), Error::<T>::QBERTooHigh);
             
             let timestamp = T::UnixTime::now().as_secs();
@@ -259,29 +258,21 @@ pub mod pallet {
             public_input: Vec<u8>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            
-            // Basic validation
+
             ensure!(!proof.is_empty(), Error::<T>::InvalidSTARKProof);
             ensure!(!public_input.is_empty(), Error::<T>::InvalidSTARKProof);
             ensure!(proof.len() >= 32, Error::<T>::InvalidSTARKProof);
-            
-            // For MVP: Simple verification based on proof structure
-            // In production, this would use a STARK verifier library
-            
-            // Extract claimed values from public input
+
+            // MVP: simplified verification. Production uses full STARK verifier.
             let qber = if public_input.len() >= 4 {
                 u32::from_le_bytes([public_input[0], public_input[1], public_input[2], public_input[3]])
             } else {
                 return Err(Error::<T>::InvalidSTARKProof.into());
             };
             
-            // Verify QBER is within acceptable range (0-11%)
             ensure!(qber <= 1100, Error::<T>::QBERTooHigh);
-            
-            // Verify proof structure (simplified for MVP)
+
             let proof_hash = T::Hashing::hash(&proof);
-            
-            // Store verified measurement
             let measurement = QKDKey {
                 id: proof_hash.as_ref()[..8].to_vec(),
                 qber,
