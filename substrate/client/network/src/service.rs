@@ -346,6 +346,9 @@ where
 				#[cfg(feature = "pqc-transport")]
 				TransportConfig::PostQuantum { .. } => {
 					// Use post-quantum secure transport (Kyber-1024 + Falcon-1024)
+					// The Ed25519-derived local_peer_id is passed through the handshake
+					// so that remote peers learn our "official" PeerId (compatible with
+					// Swarm, DHT, bootnodes). Falcon-1024 authenticates the connection.
 					let pqc_identity = network_config.pqc_identity.clone()
 						.expect("PQC identity required for PostQuantum transport");
 					info!(
@@ -354,10 +357,10 @@ where
 					);
 					info!(
 						target: LOG_TARGET,
-						"🔑 PQC Peer ID: {}",
-						pqc_identity.peer_id()
+						"🔑 Node PeerId: {} (Ed25519-compatible, Falcon-authenticated)",
+						local_peer_id
 					);
-					transport::build_pqc_transport(pqc_identity, false)
+					transport::build_pqc_transport(pqc_identity, local_peer_id, false)
 				},
 			}
 		};

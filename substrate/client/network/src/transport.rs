@@ -141,11 +141,14 @@ pub fn build_quantum_transport(
 #[allow(deprecated)]
 pub fn build_pqc_transport(
 	pqc_identity: crate::pqc_authenticator::PqcIdentity,
+	local_peer_id: PeerId,
 	memory_only: bool,
 ) -> (Boxed<(PeerId, StreamMuxerBox)>, Arc<BandwidthSinks>) {
 	use crate::pqc_authenticator::PqcConfig;
 
 	log::info!("🔐 Building post-quantum secure transport (Kyber-1024 + Falcon-1024)");
+	log::info!("🔑 Node PeerId (Ed25519-compatible): {}", local_peer_id);
+	log::info!("🔑 Falcon-1024 identity hash: {}", pqc_identity.peer_id());
 
 	// Build the base layer of the transport (TCP/DNS/WS)
 	let transport = if !memory_only {
@@ -168,8 +171,10 @@ pub fn build_pqc_transport(
 		Either::Right(OptionalTransport::some(libp2p::core::transport::MemoryTransport::default()))
 	};
 
-	// Use PQC authenticator instead of Noise
-	let pqc_config = PqcConfig::new(pqc_identity.clone());
+	// Use PQC authenticator instead of Noise.
+	// Pass the Ed25519-derived PeerId so the handshake returns PeerIds that
+	// are compatible with the Swarm, DHT, and bootnode configs.
+	let pqc_config = PqcConfig::new(pqc_identity.clone(), local_peer_id);
 	let multiplexing_config = libp2p::yamux::Config::default();
 
 	let transport = transport
@@ -180,8 +185,8 @@ pub fn build_pqc_transport(
 		.boxed();
 
 	log::info!(
-		"✅ PQC transport initialized with identity: {}",
-		pqc_identity.peer_id()
+		"✅ PQC transport initialized — Falcon-1024 auth, Kyber-1024 KEM, Ed25519-compatible PeerId: {}",
+		local_peer_id
 	);
 
 	transport.with_bandwidth_logging()
