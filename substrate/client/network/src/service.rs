@@ -275,6 +275,26 @@ where
 		let libp2p_public_key = libp2p::identity::PublicKey::from(local_public.clone());
 		let local_peer_id: PeerId = libp2p::PeerId::from_public_key(&libp2p_public_key).into();
 
+		// Override local_peer_id with PQC (Falcon-1024) derived PeerId when PostQuantum
+		// transport is active. Without this, the Swarm uses an Ed25519-derived PeerId while
+		// the PQC authenticator returns Falcon-derived PeerIds during handshake, causing
+		// WrongPeerId errors and dropped connections.
+		#[cfg(feature = "pqc-transport")]
+		let local_peer_id = match &network_config.transport {
+			TransportConfig::PostQuantum { .. } => {
+				let pqc_id = network_config.pqc_identity.as_ref()
+					.expect("PQC identity required for PostQuantum transport")
+					.peer_id();
+				info!(
+					target: LOG_TARGET,
+					"🔐 Overriding local PeerId with PQC (Falcon-1024) identity: {}",
+					pqc_id,
+				);
+				pqc_id
+			},
+			_ => local_peer_id,
+		};
+
 		network_config.boot_nodes = network_config
 			.boot_nodes
 			.into_iter()
