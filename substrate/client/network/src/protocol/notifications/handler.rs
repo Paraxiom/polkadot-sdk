@@ -107,7 +107,10 @@ const OPEN_TIMEOUT: Duration = Duration::from_secs(10);
 /// After successfully establishing a connection with the remote, we keep the connection open for
 /// at least this amount of time in order to give the rest of the code the chance to notify us to
 /// open substreams.
-const INITIAL_KEEPALIVE_TIME: Duration = Duration::from_secs(5);
+/// Increased from 5s to 30s to accommodate PQC (Falcon-1024 + Kyber-1024) transport handshakes
+/// which are slower than classical Noise, leaving less time for the protocol controller to
+/// allocate sync slots before the keep-alive grace period expires.
+const INITIAL_KEEPALIVE_TIME: Duration = Duration::from_secs(30);
 
 /// The actual handler once the connection has been established.
 ///
