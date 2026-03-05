@@ -177,8 +177,12 @@ pub fn build_pqc_transport(
 	let pqc_config = PqcConfig::new(pqc_identity.clone(), local_peer_id);
 	let multiplexing_config = libp2p::yamux::Config::default();
 
+	// Use V1 (not V1Lazy) for PQC transport. V1Lazy sends the ~4KB PQC Init message
+	// inline with the multistream-select protocol header, which corrupts the stream
+	// position on the listener side and causes "Failed to negotiate transport protocol"
+	// for all inbound connections.
 	let transport = transport
-		.upgrade(upgrade::Version::V1Lazy)
+		.upgrade(upgrade::Version::V1)
 		.authenticate(pqc_config)
 		.multiplex(multiplexing_config)
 		.timeout(Duration::from_secs(30)) // Longer timeout for PQC handshake
