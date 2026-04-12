@@ -882,19 +882,46 @@ impl TraitPair for Pair {
 		// First we need to reconstruct the secret key in the expected format
 		let sk = match sphincs_impl::SecretKey::from_bytes(&self.secret) {
 			Ok(sk) => sk,
-			Err(_) => return Signature([0u8; SIGNATURE_SERIALIZED_SIZE]),
+			Err(_) => {
+				eprintln!("🔴 [SPHINCS-SIGN] SecretKey::from_bytes FAILED for key starting 0x{:02x}{:02x}{:02x}{:02x}",
+					self.secret[0], self.secret[1], self.secret[2], self.secret[3]);
+				return Signature([0u8; SIGNATURE_SERIALIZED_SIZE]);
+			}
 		};
-		
+
 		// Sign the message
 		let signed_msg = sphincs_impl::sign(message, &sk);
-		
+
 		// Convert to our signature format
 		let sig_bytes = signed_msg.as_bytes();
 		let mut signature = [0u8; SIGNATURE_SERIALIZED_SIZE];
 		let copy_len = sig_bytes.len().min(SIGNATURE_SERIALIZED_SIZE);
 		signature[..copy_len].copy_from_slice(&sig_bytes[..copy_len]);
-		
-		Signature(signature)
+
+		// SELF-TEST: verify the signature we just created using our own public key
+		let sig_obj = Signature(signature);
+		let self_verify = sig_obj.verify(message, &self.public);
+		if !self_verify {
+			let pk_hex: String = self.public.0.iter().take(8).map(|b| format!("{:02x}", b)).collect();
+			eprintln!("🔴 [SPHINCS-SIGN] SELF-TEST FAILED! Signature does not verify against own public key pk=0x{}… msg_len={}", pk_hex, message.len());
+			eprintln!("   sk_first8=0x{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x} sk_last8=0x{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
+				self.secret[0], self.secret[1], self.secret[2], self.secret[3],
+				self.secret[4], self.secret[5], self.secret[6], self.secret[7],
+				self.secret[120], self.secret[121], self.secret[122], self.secret[123],
+				self.secret[124], self.secret[125], self.secret[126], self.secret[127]);
+			eprintln!("   pk_from_sk=0x{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
+				self.secret[64], self.secret[65], self.secret[66], self.secret[67],
+				self.secret[68], self.secret[69], self.secret[70], self.secret[71]);
+		} else {
+			// Only log once to avoid spam
+			static LOGGED: core::sync::atomic::AtomicBool = core::sync::atomic::AtomicBool::new(false);
+			if !LOGGED.swap(true, core::sync::atomic::Ordering::Relaxed) {
+				let pk_hex: String = self.public.0.iter().take(8).map(|b| format!("{:02x}", b)).collect();
+				eprintln!("✅ [SPHINCS-SIGN] Self-test PASSED for pk=0x{}…", pk_hex);
+			}
+		}
+
+		sig_obj
 	}
 
 	fn verify<M: AsRef<[u8]>>(sig: &Self::Signature, message: M, public: &Self::Public) -> bool {
