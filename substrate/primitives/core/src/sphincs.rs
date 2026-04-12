@@ -465,10 +465,17 @@ impl Signature {
 			// Verify the signature by opening the signed message
 			match sphincs_impl::open(&signed_msg, &pk) {
 				Ok(opened_msg) => {
-					// Check if the opened message matches our input message
-					opened_msg == msg_bytes
+					let matches = opened_msg == msg_bytes;
+					if !matches {
+						eprintln!("🔴 [SPHINCS-VERIFY] open() OK but message mismatch: opened_len={} msg_len={}", opened_msg.len(), msg_bytes.len());
+					}
+					matches
 				}
-				Err(_) => false,
+				Err(_) => {
+					let pk_hex: String = pubkey.0.iter().take(8).map(|b| format!("{:02x}", b)).collect();
+					eprintln!("🔴 [SPHINCS-VERIFY] open() FAILED: pk=0x{}… msg_len={}", pk_hex, msg_bytes.len());
+					false
+				}
 			}
 		}
 
