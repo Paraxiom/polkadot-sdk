@@ -21,9 +21,13 @@ use serde::{Deserialize, Serialize};
 // Constants for BoundedVec sizes
 // ============================================================================
 
-/// Maximum size of Falcon1024 signature (in bytes)
-/// Falcon1024 signatures are approximately 1,280 bytes
-pub const MAX_SIGNATURE_SIZE: u32 = 1_500;
+/// Maximum size of vote signature (in bytes).
+///
+/// Phase 7 (2026-04-13): switched from Falcon-1024 (~1,280 bytes) to
+/// SPHINCS+-SHAKE-256f-simple (49,856 bytes) so the on-chain Aura authority
+/// keys can be reused for vote verification via `sp_io::crypto::sphincs_verify`.
+/// Falcon had no on-chain pubkey registry and no WASM-compatible verify path.
+pub const MAX_SIGNATURE_SIZE: u32 = 50_000;
 
 /// Maximum number of votes in a finality certificate
 /// Should accommodate largest expected validator set
