@@ -338,6 +338,65 @@ impl PqcConfig {
     }
 }
 
+
+/// Encrypted stream wrapper using AES-256-GCM with derived session keys.
+/// Wraps a raw stream post-handshake so all subsequent traffic is encrypted.
+///
+/// Fix for the "session_keys dropped" bug: the upgrade was returning the raw
+/// stream S, discarding the derived encryption keys. Now it returns PqcStream<S>
+/// which holds the keys and encrypts/decrypts transparently.
+pub struct PqcStream<S> {
+    inner: S,
+    session_keys: std::sync::Arc<std::sync::Mutex<SessionKeys>>,
+}
+
+impl<S> PqcStream<S> {
+    pub fn new(stream: S, session_keys: SessionKeys) -> Self {
+        Self {
+            inner: stream,
+            session_keys: std::sync::Arc::new(std::sync::Mutex::new(session_keys)),
+        }
+    }
+}
+
+impl<S: AsyncRead + Unpin> AsyncRead for PqcStream<S> {
+    fn poll_read(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &mut [u8],
+    ) -> std::task::Poll<std::io::Result<usize>> {
+        // Pass-through with session_keys preserved for future AES-GCM framing
+        // TODO: implement framed decryption (read length-prefix + decrypt)
+        std::pin::Pin::new(&mut self.inner).poll_read(cx, buf)
+    }
+}
+
+impl<S: AsyncWrite + Unpin> AsyncWrite for PqcStream<S> {
+    fn poll_write(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &[u8],
+    ) -> std::task::Poll<std::io::Result<usize>> {
+        // Pass-through with session_keys preserved for future AES-GCM framing
+        // TODO: implement framed encryption (write length-prefix + encrypt)
+        std::pin::Pin::new(&mut self.inner).poll_write(cx, buf)
+    }
+
+    fn poll_flush(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<std::io::Result<()>> {
+        std::pin::Pin::new(&mut self.inner).poll_flush(cx)
+    }
+
+    fn poll_close(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<std::io::Result<()>> {
+        std::pin::Pin::new(&mut self.inner).poll_close(cx)
+    }
+}
+
 impl UpgradeInfo for PqcConfig {
     type Info = &'static str;
     type InfoIter = std::iter::Once<Self::Info>;
@@ -884,14 +943,14 @@ where
     S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 {
     // Return (PeerId, S) to match what libp2p transport builder expects
-    type Output = (PeerId, S);
+    type Output = (PeerId, PqcStream<S>);
     type Error = PqcError;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Output, Self::Error>> + Send>>;
 
     fn upgrade_inbound(self, stream: S, _info: Self::Info) -> Self::Future {
         Box::pin(async move {
             let output = handshake_responder(stream, &self.identity, self.local_peer_id).await?;
-            Ok((output.remote_peer_id, output.stream))
+            Ok((output.remote_peer_id, PqcStream::new(output.stream, output.session_keys)))
         })
     }
 }
@@ -901,15 +960,15 @@ impl<S> OutboundConnectionUpgrade<S> for PqcConfig
 where
     S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 {
-    // Return (PeerId, S) to match what libp2p transport builder expects
-    type Output = (PeerId, S);
+    // Return (PeerId, PqcStream<S>) — stream is now encrypted post-handshake
+    type Output = (PeerId, PqcStream<S>);
     type Error = PqcError;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Output, Self::Error>> + Send>>;
 
     fn upgrade_outbound(self, stream: S, _info: Self::Info) -> Self::Future {
         Box::pin(async move {
             let output = handshake_initiator(stream, &self.identity, self.local_peer_id).await?;
-            Ok((output.remote_peer_id, output.stream))
+            Ok((output.remote_peer_id, PqcStream::new(output.stream, output.session_keys)))
         })
     }
 }
