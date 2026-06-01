@@ -251,27 +251,52 @@ pub mod pallet {
         ValidatorLimitReached,
     }
     
-    // TODO: Fix genesis config serde issue
-    // #[pallet::genesis_config]
-    // #[derive(frame_support::DefaultNoBound)]
-    // pub struct GenesisConfig<T: Config> {
-    //     pub initial_validators: Vec<T::AccountId>,
-    //     pub initial_harmonic_state: HarmonicState,
-    //     #[serde(skip)]
-    //     pub _config: sp_std::marker::PhantomData<T>,
-    // }
-    // 
-    // #[pallet::genesis_build]
-    // impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
-    //     fn build(&self) {
-    //         let bounded_validators: BoundedVec<_, _> = self.initial_validators
-    //             .clone()
-    //             .try_into()
-    //             .expect("Too many initial validators");
-    //         Validators::<T>::put(bounded_validators);
-    //         NetworkHarmonicState::<T>::put(&self.initial_harmonic_state);
-    //     }
-    // }
+    /// Genesis-time seed for the PoC validator set + harmonic state.
+    ///
+    /// Without this builder, `Validators` starts empty at every chain
+    /// bootstrap and substrate finality never advances until someone
+    /// manually calls `register_validator` for each operator. The
+    /// 2026-05-28 testnet incident (QuantumHarmony GH issue #33) was
+    /// caused exactly by this absence; the recovery required a sudo
+    /// `set_storage` to populate `Validators` after the chain had
+    /// already produced 600k+ blocks with frozen finality.
+    ///
+    /// The earlier "TODO: Fix genesis config serde issue" was the
+    /// `#[serde(skip)]` line attempting to act without explicit serde
+    /// derives, which the `#[pallet::genesis_config]` macro doesn't
+    /// emit automatically when `DefaultNoBound` is used. The fix here:
+    /// drop the PhantomData field entirely (T is already bound via
+    /// `Vec<T::AccountId>` so we don't need a marker) and rely on the
+    /// macro's default derive set, which handles the serde requirement
+    /// correctly under the std feature.
+    #[pallet::genesis_config]
+    #[derive(frame_support::DefaultNoBound)]
+    pub struct GenesisConfig<T: Config> {
+        /// Initial PoC validator set. Each entry must map to a
+        /// registered `pallet_quantum_crypto::NodeHardware` entry for
+        /// `register_validator` to later succeed for them — but at
+        /// genesis we trust the chainspec author and skip the check.
+        pub initial_validators: Vec<T::AccountId>,
+    }
+
+    #[pallet::genesis_build]
+    impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
+        fn build(&self) {
+            let bounded_validators: BoundedVec<T::AccountId, T::MaxValidators> = self
+                .initial_validators
+                .clone()
+                .try_into()
+                .expect("Too many initial validators for MaxValidators bound");
+            Validators::<T>::put(bounded_validators);
+            // NetworkHarmonicState is intentionally NOT seeded from
+            // genesis: HarmonicState's serde derives are
+            // `cfg_attr(std)`-gated and the genesis_config macro
+            // requires Serialize unconditionally for typed fields.
+            // The gadget populates NetworkHarmonicState from coherence
+            // proofs on chain — an empty-zeros initial state is the
+            // legitimate value, set by ValueQuery default on first read.
+        }
+    }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
