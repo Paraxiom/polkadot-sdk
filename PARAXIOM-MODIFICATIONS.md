@@ -24,6 +24,8 @@ This fork adds **SPHINCS+-SHAKE-256f-simple** post-quantum signature support to 
 - **`substrate/client/network/src/protocol/notifications/handler.rs`** — V1Lazy to V1 multistream-select fix for inbound PQC connections.
 
 ### Proof-of-Coherence Finality
+- `substrate/frame/proof-of-coherence/src/types.rs`: `MAX_VOTES_PER_CERTIFICATE` 100 → 256
+  (2026-07-08 — 100 capped clean finality at N=149; certificates are quorum-trimmed node-side)
 - **`substrate/frame/proof-of-coherence/src/types.rs`** — `MAX_SIGNATURE_SIZE` bumped from 1,500 to 50,000 to accommodate SPHINCS+ vote signatures.
 - **`substrate/frame/proof-of-coherence/src/lib.rs`** — Genesis builder restored (2026-06-01): `GenesisConfig` populates `Validators` from a chainspec-provided `initial_validators: Vec<AccountId>`. Without this, every fresh chain bootstrap leaves `Validators` empty, finality stalls until a sudo recovery (the 2026-05-28 testnet incident — Paraxiom/quantumharmony#33). The earlier "TODO: Fix genesis config serde issue" was the `#[serde(skip)]` PhantomData field acting without explicit serde derives; the fix drops the PhantomData entirely since `T` is already bound via the `Vec<T::AccountId>` field.
 

@@ -29,9 +29,13 @@ use serde::{Deserialize, Serialize};
 /// Falcon had no on-chain pubkey registry and no WASM-compatible verify path.
 pub const MAX_SIGNATURE_SIZE: u32 = 50_000;
 
-/// Maximum number of votes in a finality certificate
-/// Should accommodate largest expected validator set
-pub const MAX_VOTES_PER_CERTIFICATE: u32 = 100;
+/// Maximum number of votes in a finality certificate.
+/// Must be >= ceil(2N/3) for the largest supported validator set (Aura
+/// MaxAuthorities is 256 in the quantumharmony runtime): 100 capped clean
+/// finality at N=149 — found by the 2026-07-08 scaling ladder (certificates
+/// are trimmed to quorum node-side, so this bounds cert size at 256×~50KB
+/// SPHINCS+ votes ≈ 12.8MB, under the 16MB coherence notification cap).
+pub const MAX_VOTES_PER_CERTIFICATE: u32 = 256;
 
 /// Coherence proof structure
 #[derive(Clone, Encode, Decode, TypeInfo, MaxEncodedLen)]
