@@ -2,16 +2,19 @@
 
 **Fork**: `Paraxiom/polkadot-sdk`
 **Branch**: `daily/2025-10-16-sphincs-deterministic-keys`
-**Pinned commit**: `5ec59910900e0784cfe8baf6ac376d856fad992c`
-**Last updated**: 2026-04-16
+**Pinned commit**: `624ba59e2ddb15a2ee62f75522ec1de125ff304f` (branch tip; quantumharmony Cargo.lock pins this rev)
+**Upstream base**: `e007db09171dd5248f5d8663a56be679b92fdbe7` (paritytech master, 2025-07-18, PR #9262)
+**Last updated**: 2026-07-24 (fork-vs-vanilla audit)
 
 ---
 
 ## Summary
 
-This fork adds **SPHINCS+-SHAKE-256f-simple** post-quantum signature support to Substrate, enabling QuantumHarmony's post-quantum BFT consensus. It modifies 18 files across 28 commits on top of the upstream polkadot-sdk.
+This fork adds **SPHINCS+-SHAKE-256f-simple** post-quantum signature support to Substrate, enabling QuantumHarmony's post-quantum BFT consensus.
 
-## Key Modifications (18 files)
+Full divergence from vanilla (audited 2026-07-24, `git diff e007db09..624ba59e`): **80 Paraxiom commits, 309 files changed, +47,353 / −9,022 lines**. Upstream master had advanced 1,195 commits past the fork base as of the audit date. The sections below describe the load-bearing modifications, not every touched file.
+
+## Key Modifications
 
 ### Core SPHINCS+ Integration
 - **`substrate/primitives/core/src/sphincs.rs`** — SPHINCS+ keytype module: `Public` (64 bytes), `Pair` (128-byte secret), `Signature` (49,856 bytes), `SignatureWithPublic` (sig + pubkey = 49,920 bytes). Deterministic key caching for dev mode.
@@ -41,7 +44,9 @@ This fork adds **SPHINCS+-SHAKE-256f-simple** post-quantum signature support to 
 - **`substrate/frame/staking/src/lib.rs`** — Staking adjustments (note: staking pallet not active in QH production).
 - **`substrate/client/sysinfo/src/sysinfo.rs`** — System info adjustments.
 
-## Commit History (28 Paraxiom-specific commits)
+## Commit History (most recent 28 of 80 Paraxiom commits)
+
+Full list: `git log --oneline e007db09..624ba59e`. Recent notable commits since this list was drawn up: `c20b6a4d` (preserve session_keys in PqcStream post-handshake), `3c889e86` (restore PoC genesis builder, PR #1), `c4a7daa1` (drop unused pqc_kyber dep, PR #2), `624ba59e` (MAX_VOTES_PER_CERTIFICATE 100 → 256).
 
 ```
 5ec5991 feat(poc): Phase 7 — bump MAX_SIGNATURE_SIZE for SPHINCS+ votes
@@ -77,9 +82,10 @@ f73e23b feat: Replace Blake2 with SHA3 for full quantum resistance
 
 ## Dependency
 
-This fork requires `Paraxiom/parity-scale-codec` for SCALE encoding of `SignatureWithPublic` (49,920 bytes). Standard parity-scale-codec cannot encode the custom `MultiSignature::SphincsPlus` variant.
+This fork uses `Paraxiom/parity-scale-codec` for SCALE encoding of `SignatureWithPublic` (49,920 bytes). The codec fork's only functional change vs upstream v3.7.5 is `INITIAL_PREALLOCATION` raised 16 KiB → 256 KiB so large SPHINCS+ values decode without repeated reallocation (vanilla codec would still decode them correctly, just slower); the remaining fork commits are documentation (`AUDIT_CERTIFICATE.md`) and diagnostics (`unreachable!` → descriptive `panic!`).
 
 ## Known Issues in This Fork
 
 1. **PQC transport race condition** (`pqc_authenticator.rs`) — concurrent initiator+responder handshake drops stream. Production workaround: `DISABLE_PQC_TRANSPORT=1`.
 2. **Aura seal verification debug logging** (commits `f22e20b`, `bf83071`) — debug/diagnostic commits still in history. The bypass was removed in `f7ff69b` — strict verification is the current state.
+3. **Downstream mixed sdk lineages** (quantumharmony `Cargo.lock`, found in the 2026-07-24 audit) — the node's dependency graph resolves 229 crates from this fork (sp-core v28) **plus 34 crates from vanilla paritytech `release-polkadot-v1.1.0`** (a second `sp-core` v21, `frame-support`, `frame-system`) and a crates.io `sp-core` v31. Some dependency still pulls vanilla v1.1.0 primitives; trace with `cargo tree -i sp-core@21.0.0` in quantumharmony and unify.
